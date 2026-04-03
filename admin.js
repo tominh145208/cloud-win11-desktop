@@ -179,6 +179,7 @@ const firewallRulesList = document.getElementById("firewall-rules-list");
 const deviceDetailModal = document.getElementById("device-detail-modal");
 const closeDeviceDetailButton = document.getElementById("close-device-detail-button");
 const deviceDetailBody = document.getElementById("device-detail-body");
+const adminRealtimeNotifyContainer = document.getElementById("admin-realtime-notify-container");
 const adminNavButtons = Array.from(document.querySelectorAll(".admin-nav-btn[data-admin-section-target]"));
 const adminSections = Array.from(document.querySelectorAll(".admin-section[data-admin-section]"));
 
@@ -194,6 +195,9 @@ let adminAuditLogs = [];
 let adminAlerts = [];
 let adminFirewallRules = [];
 let dashboardStats = { hourly: [], daily: [] };
+let hasHydratedClientPresence = false;
+const knownClientPresence = new Set();
+let realtimeAudioContext = null;
 const clientFilters = {
     online: "all",
     device: "all",
@@ -404,12 +408,144 @@ async function fetchClientRows() {
         }
         const payload = await response.json();
         clientRows = Array.isArray(payload?.clients) ? payload.clients : [];
+        handleRealtimeClientJoin(clientRows);
     } catch (error) {
         if (error.message === "admin_auth_required") {
             throw error;
         }
         clientRows = Array.isArray(adminData.clients) ? adminData.clients : [];
+        handleRealtimeClientJoin(clientRows);
     }
+}
+
+function getClientPresenceKey(client) {
+    const id = String(client?.clientId || "").trim();
+    if (id) {
+        return `id:${id}`;
+    }
+    return `fp:${buildClientFingerprint(client)}`;
+}
+
+function getClientPresenceDisplayName(client) {
+    const desktopName = String(client?.desktopName || "").trim();
+    const currentUserId = String(client?.currentUserId || "").trim();
+    const limoreName = String(client?.limoreName || "").trim();
+    return desktopName || currentUserId || limoreName || "Nguoi dung moi";
+}
+
+function showRealtimeJoinToast(title, message) {
+    if (!adminRealtimeNotifyContainer) {
+        return;
+    }
+    const toast = document.createElement("div");
+    toast.className = "admin-realtime-toast";
+    const titleEl = document.createElement("strong");
+    titleEl.textContent = title;
+    const messageEl = document.createElement("span");
+    messageEl.textContent = message;
+    toast.appendChild(titleEl);
+    toast.appendChild(messageEl);
+    adminRealtimeNotifyContainer.appendChild(toast);
+    window.setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-8px)";
+        window.setTimeout(() => toast.remove(), 220);
+    }, 4200);
+}
+
+function playJoinTingSound() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+            return;
+        }
+        if (!realtimeAudioContext) {
+            realtimeAudioContext = new AudioCtx();
+        }
+        if (realtimeAudioContext.state === "suspended") {
+            realtimeAudioContext.resume().catch(() => {});
+        }
+        const now = realtimeAudioContext.currentTime;
+        const gainNode = realtimeAudioContext.createGain();
+        gainNode.gain.setValueAtTime(0.0001, now);
+        gainNode.connect(realtimeAudioContext.destination);
+
+        const tone1 = realtimeAudioContext.createOscillator();
+        tone1.type = "sine";
+        tone1.frequency.setValueAtTime(1046, now);
+        tone1.connect(gainNode);
+        tone1.start(now);
+        gainNode.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+        tone1.stop(now + 0.16);
+
+        const tone2 = realtimeAudioContext.createOscillator();
+        tone2.type = "sine";
+        tone2.frequency.setValueAtTime(1318, now + 0.18);
+        tone2.connect(gainNode);
+        tone2.start(now + 0.18);
+        gainNode.gain.exponentialRampToValueAtTime(0.14, now + 0.22);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+        tone2.stop(now + 0.36);
+    } catch (error) {
+        // Ignore audio failures.
+    }
+}
+
+function warmupJoinSoundContext() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+            return;
+        }
+        if (!realtimeAudioContext) {
+            realtimeAudioContext = new AudioCtx();
+        }
+        if (realtimeAudioContext.state === "suspended") {
+            realtimeAudioContext.resume().catch(() => {});
+        }
+    } catch (error) {
+        // Ignore audio failures.
+    }
+}
+
+function handleRealtimeClientJoin(rows) {
+    const mergedRows = mergeClientRows(rows);
+    const rowMap = new Map();
+    mergedRows.forEach((client) => {
+        rowMap.set(getClientPresenceKey(client), client);
+    });
+
+    if (!hasHydratedClientPresence) {
+        knownClientPresence.clear();
+        rowMap.forEach((_, key) => knownClientPresence.add(key));
+        hasHydratedClientPresence = true;
+        return;
+    }
+
+    const now = Date.now();
+    rowMap.forEach((client, key) => {
+        if (knownClientPresence.has(key)) {
+            return;
+        }
+        knownClientPresence.add(key);
+        const seenMs = client?.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
+        if (!seenMs || now - seenMs > 45000) {
+            return;
+        }
+        const deviceTitle = getClientDeviceTitle(client);
+        const displayName = getClientPresenceDisplayName(client);
+        const ipDisplay = String(client?.ipAddress || "khong ro IP");
+        showRealtimeJoinToast("Co nguoi vua vao web", `${displayName} • ${deviceTitle} • ${ipDisplay}`);
+        playJoinTingSound();
+    });
+
+    const currentKeys = new Set(rowMap.keys());
+    Array.from(knownClientPresence).forEach((key) => {
+        if (!currentKeys.has(key)) {
+            knownClientPresence.delete(key);
+        }
+    });
 }
 
 async function fetchOtpSettings() {
@@ -2031,6 +2167,9 @@ window.addEventListener("storage", (event) => {
     adminData = loadAdminData();
     renderAll();
 });
+
+window.addEventListener("pointerdown", warmupJoinSoundContext, { passive: true });
+window.addEventListener("keydown", warmupJoinSoundContext, { passive: true });
 
 async function bootstrapAdmin() {
     renderAdminSections();

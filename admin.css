@@ -735,6 +735,49 @@ body {
     transform: translateY(0);
 }
 
+.admin-realtime-notify-container {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 11000;
+    display: grid;
+    gap: 10px;
+    width: min(360px, calc(100vw - 24px));
+    pointer-events: none;
+}
+
+.admin-realtime-toast {
+    pointer-events: auto;
+    display: grid;
+    gap: 5px;
+    padding: 12px 14px;
+    border: 1px solid rgba(126, 220, 255, 0.24);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(12, 25, 38, 0.96), rgba(10, 17, 29, 0.96));
+    color: #eef8ff;
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.42);
+    transform: translateY(-8px);
+    opacity: 0;
+    animation: adminToastIn 0.2s ease forwards;
+}
+
+.admin-realtime-toast strong {
+    font-size: 14px;
+}
+
+.admin-realtime-toast span {
+    color: rgba(216, 232, 247, 0.84);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+@keyframes adminToastIn {
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
 @media (max-width: 1080px) {
     .admin-layout {
         grid-template-columns: 1fr;
@@ -801,6 +844,12 @@ body {
 
     .admin-filter-bar {
         grid-template-columns: 1fr;
+    }
+
+    .admin-realtime-notify-container {
+        right: 10px;
+        top: 10px;
+        width: min(340px, calc(100vw - 20px));
     }
 
     .field-wide {
