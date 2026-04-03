@@ -1,4 +1,21 @@
 (() => {
+    const ROLLOUT_ASSIGNMENT_KEY = "win11_rollout_assignment_v1";
+    const rolloutState = (() => {
+        if (window.__LIMORE_ROLLOUT && typeof window.__LIMORE_ROLLOUT === "object") {
+            return window.__LIMORE_ROLLOUT;
+        }
+        try {
+            const raw = localStorage.getItem(ROLLOUT_ASSIGNMENT_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            return null;
+        }
+    })();
+    const rolloutChannel = String(rolloutState?.channel || "latest").trim().toLowerCase();
+    if (rolloutChannel && rolloutChannel !== "latest") {
+        return;
+    }
+
     const desktopIconsEl = document.getElementById("desktop-icons");
     const desktopSelectionBoxEl = document.getElementById("desktop-selection-box");
     const shortcutContextMenuEl = document.getElementById("shortcut-context-menu");

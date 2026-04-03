@@ -14,6 +14,7 @@ const ADMIN_DEVICES_EXPORT_API = "/api/admin-devices/export";
 const ADMIN_DEVICE_DETAIL_API = "/api/admin-devices/detail";
 const ADMIN_ALERTS_API = "/api/admin-alerts";
 const ADMIN_DASHBOARD_API = "/api/admin-dashboard";
+const ADMIN_ROLLOUT_API = "/api/admin-rollout";
 const ADMIN_TOKEN_KEY = "win11_admin_session_token_v1";
 
 const defaultGames = [
@@ -101,7 +102,14 @@ const defaultState = {
     firewallRules: [],
     ipAlerts: [],
     clientHistory: [],
-    knownIpsByUser: {}
+    knownIpsByUser: {},
+    rollout: {
+        enabled: false,
+        percent: 100,
+        stableVersion: "stable",
+        latestVersion: "latest",
+        updatedAt: ""
+    }
 };
 
 const defaultUsers = [
@@ -173,6 +181,14 @@ const clientFilterUser = document.getElementById("client-filter-user");
 const clientFilterResetButton = document.getElementById("client-filter-reset-button");
 const dedupeClientsButton = document.getElementById("dedupe-clients-button");
 const exportClientsCsvButton = document.getElementById("export-clients-csv-button");
+const rolloutEnabledInput = document.getElementById("rollout-enabled-input");
+const rolloutPercentInput = document.getElementById("rollout-percent-input");
+const rolloutPercentValue = document.getElementById("rollout-percent-value");
+const rolloutStableVersionInput = document.getElementById("rollout-stable-version-input");
+const rolloutLatestVersionInput = document.getElementById("rollout-latest-version-input");
+const rolloutQuickPercentButtons = Array.from(document.querySelectorAll("[data-rollout-percent]"));
+const saveRolloutButton = document.getElementById("save-rollout-button");
+const rolloutPreviewCopy = document.getElementById("rollout-preview-copy");
 const firewallRuleInput = document.getElementById("firewall-rule-input");
 const addFirewallRuleButton = document.getElementById("add-firewall-rule-button");
 const firewallRulesList = document.getElementById("firewall-rules-list");
@@ -236,6 +252,22 @@ function sanitizeUsers(users) {
     return nextUsers.length ? nextUsers : cloneJson(defaultUsers);
 }
 
+function sanitizeRolloutConfig(rawConfig = {}, fallbackConfig = defaultState.rollout) {
+    const percentRaw = Number(rawConfig?.percent ?? fallbackConfig.percent);
+    const percent = Number.isFinite(percentRaw)
+        ? Math.max(0, Math.min(100, Math.round(percentRaw)))
+        : fallbackConfig.percent;
+    const stableVersion = String(rawConfig?.stableVersion || fallbackConfig.stableVersion || "stable").trim() || "stable";
+    const latestVersion = String(rawConfig?.latestVersion || fallbackConfig.latestVersion || "latest").trim() || "latest";
+    return {
+        enabled: Boolean(rawConfig?.enabled),
+        percent,
+        stableVersion: stableVersion.slice(0, 48),
+        latestVersion: latestVersion.slice(0, 48),
+        updatedAt: String(rawConfig?.updatedAt || fallbackConfig.updatedAt || "").trim()
+    };
+}
+
 function getCurrentUser() {
     return adminData.users.find((user) => user.id === adminData.state.currentUserId) || adminData.users[0];
 }
@@ -269,7 +301,8 @@ function mergeAdminData(rawData = {}) {
             clientHistory: Array.isArray(rawData?.state?.clientHistory) ? rawData.state.clientHistory : [],
             knownIpsByUser: rawData?.state?.knownIpsByUser && typeof rawData.state.knownIpsByUser === "object"
                 ? rawData.state.knownIpsByUser
-                : {}
+                : {},
+            rollout: sanitizeRolloutConfig(rawData?.state?.rollout, defaults.state.rollout)
         }
     };
 }
@@ -333,6 +366,24 @@ function applyRolePermissions() {
             input.removeAttribute("disabled");
         } else {
             input.setAttribute("disabled", "");
+        }
+    });
+
+    [rolloutEnabledInput, rolloutPercentInput, rolloutStableVersionInput, rolloutLatestVersionInput, saveRolloutButton].forEach((input) => {
+        if (!input) {
+            return;
+        }
+        if (isSuperAdmin()) {
+            input.removeAttribute("disabled");
+        } else {
+            input.setAttribute("disabled", "");
+        }
+    });
+    rolloutQuickPercentButtons.forEach((button) => {
+        if (isSuperAdmin()) {
+            button.removeAttribute("disabled");
+        } else {
+            button.setAttribute("disabled", "");
         }
     });
 }
@@ -896,6 +947,47 @@ function renderOverview() {
     overviewPackage.textContent = activePackage ? activePackage.title : "Chua co";
 }
 
+function getCurrentRolloutConfig() {
+    const fallback = defaultState.rollout;
+    adminData.state = adminData.state && typeof adminData.state === "object" ? adminData.state : {};
+    adminData.state.rollout = sanitizeRolloutConfig(adminData.state.rollout, fallback);
+    return adminData.state.rollout;
+}
+
+function updateRolloutPreview() {
+    if (!rolloutPreviewCopy) {
+        return;
+    }
+    const rollout = getCurrentRolloutConfig();
+    const statusLabel = rollout.enabled
+        ? `Bat rollout ${rollout.percent}% (${rollout.stableVersion} -> ${rollout.latestVersion})`
+        : `Tat rollout (tat ca dung ${rollout.latestVersion})`;
+    const updatedAtLabel = rollout.updatedAt
+        ? ` - cap nhat ${new Date(rollout.updatedAt).toLocaleString("vi-VN")}`
+        : "";
+    rolloutPreviewCopy.textContent = `Rollout hien tai: ${statusLabel}${updatedAtLabel}`;
+}
+
+function renderRolloutPanel() {
+    const rollout = getCurrentRolloutConfig();
+    if (rolloutEnabledInput) {
+        rolloutEnabledInput.value = rollout.enabled ? "1" : "0";
+    }
+    if (rolloutPercentInput) {
+        rolloutPercentInput.value = String(rollout.percent);
+    }
+    if (rolloutPercentValue) {
+        rolloutPercentValue.textContent = `${rollout.percent}%`;
+    }
+    if (rolloutStableVersionInput) {
+        rolloutStableVersionInput.value = rollout.stableVersion;
+    }
+    if (rolloutLatestVersionInput) {
+        rolloutLatestVersionInput.value = rollout.latestVersion;
+    }
+    updateRolloutPreview();
+}
+
 function renderAccountForm() {
     const currentUser = getCurrentUser();
     currentUserInput.innerHTML = adminData.users.map((user) => `<option value="${user.id}">${user.desktopName}</option>`).join("");
@@ -1262,6 +1354,7 @@ function mergeClientRows(clients) {
 
 function renderAll() {
     renderOverview();
+    renderRolloutPanel();
     renderAccountForm();
     renderPackagesForm();
     renderUsersTable();
@@ -1903,6 +1996,56 @@ async function handleSaveOtpSettings() {
     }
 }
 
+function syncRolloutConfigFromForm() {
+    const rollout = getCurrentRolloutConfig();
+    const nextRollout = sanitizeRolloutConfig({
+        ...rollout,
+        enabled: rolloutEnabledInput?.value === "1",
+        percent: Number(rolloutPercentInput?.value ?? rollout.percent),
+        stableVersion: String(rolloutStableVersionInput?.value || rollout.stableVersion).trim(),
+        latestVersion: String(rolloutLatestVersionInput?.value || rollout.latestVersion).trim()
+    }, rollout);
+    adminData.state.rollout = nextRollout;
+    if (rolloutPercentValue) {
+        rolloutPercentValue.textContent = `${nextRollout.percent}%`;
+    }
+    updateRolloutPreview();
+}
+
+async function handleSaveRolloutSettings() {
+    if (!isSuperAdmin()) {
+        showStatus("Chi Super Admin duoc sua rollout");
+        return;
+    }
+    syncRolloutConfigFromForm();
+    try {
+        const response = await fetch(ADMIN_ROLLOUT_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                rollout: adminData.state.rollout
+            })
+        });
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong luu duoc rollout");
+        }
+        adminData.state.rollout = sanitizeRolloutConfig(payload?.rollout, defaultState.rollout);
+        renderRolloutPanel();
+        showStatus("Da cap nhat rollout version");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong luu duoc rollout");
+    }
+}
+
 async function handleSaveRoleUser() {
     if (!isSuperAdmin()) {
         showStatus("Chi Super Admin duoc sua role user");
@@ -2103,6 +2246,23 @@ ackAllAlertsButton?.addEventListener("click", handleAckAllAlerts);
 addFirewallRuleButton?.addEventListener("click", handleAddFirewallRule);
 dedupeClientsButton?.addEventListener("click", handleDedupeClients);
 exportClientsCsvButton?.addEventListener("click", handleExportClientsCsv);
+rolloutEnabledInput?.addEventListener("change", syncRolloutConfigFromForm);
+rolloutPercentInput?.addEventListener("input", syncRolloutConfigFromForm);
+rolloutStableVersionInput?.addEventListener("input", syncRolloutConfigFromForm);
+rolloutLatestVersionInput?.addEventListener("input", syncRolloutConfigFromForm);
+rolloutQuickPercentButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        if (!rolloutPercentInput) {
+            return;
+        }
+        const percent = Number(button.dataset.rolloutPercent || "");
+        if (Number.isFinite(percent)) {
+            rolloutPercentInput.value = String(Math.max(0, Math.min(100, percent)));
+            syncRolloutConfigFromForm();
+        }
+    });
+});
+saveRolloutButton?.addEventListener("click", handleSaveRolloutSettings);
 clientFilterOnline?.addEventListener("change", () => {
     clientFilters.online = clientFilterOnline.value || "all";
     renderClientsTable();

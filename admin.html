@@ -129,6 +129,43 @@
                                 <div id="alerts-list" class="simple-list"></div>
                             </div>
                         </article>
+                        <article class="admin-panel">
+                            <div class="panel-head">
+                                <h2>Version rollout</h2>
+                                <p>Cap phien ban moi theo % thiet bi de test an toan (10% -> 50% -> 100%).</p>
+                            </div>
+                            <div class="panel-body form-grid">
+                                <label class="field">
+                                    <span>Trang thai rollout</span>
+                                    <select id="rollout-enabled-input">
+                                        <option value="0">Tat (tat ca dung latest)</option>
+                                        <option value="1">Bat rollout theo %</option>
+                                    </select>
+                                </label>
+                                <label class="field">
+                                    <span>Ty le rollout (%)</span>
+                                    <input id="rollout-percent-input" type="range" min="0" max="100" step="1" value="100">
+                                    <small id="rollout-percent-value">100%</small>
+                                </label>
+                                <label class="field">
+                                    <span>Stable version</span>
+                                    <input id="rollout-stable-version-input" type="text" placeholder="stable">
+                                </label>
+                                <label class="field">
+                                    <span>Latest version</span>
+                                    <input id="rollout-latest-version-input" type="text" placeholder="latest">
+                                </label>
+                                <div class="rollout-quick-actions">
+                                    <button type="button" class="admin-btn is-small" data-rollout-percent="10">10%</button>
+                                    <button type="button" class="admin-btn is-small" data-rollout-percent="50">50%</button>
+                                    <button type="button" class="admin-btn is-small" data-rollout-percent="100">100%</button>
+                                </div>
+                                <button id="save-rollout-button" type="button" class="admin-btn is-primary">Luu rollout</button>
+                            </div>
+                            <div class="panel-body notes">
+                                <p id="rollout-preview-copy">Rollout hien tai: 100% latest.</p>
+                            </div>
+                        </article>
                     </section>
                 </section>
 

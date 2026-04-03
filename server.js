@@ -19,6 +19,13 @@ const BACKUP_DIR = path.join(DATA_DIR, "backups");
 const DEFAULT_ADMIN_PASSWORD = "12345";
 const DEFAULT_ADMIN_OTP_CODE = "123456";
 const adminSessions = new Map();
+const DEFAULT_ROLLOUT_CONFIG = Object.freeze({
+    enabled: false,
+    percent: 100,
+    stableVersion: "stable",
+    latestVersion: "latest",
+    updatedAt: ""
+});
 
 const MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -240,6 +247,62 @@ function getBlockedClientIds(data) {
         : [];
 }
 
+function sanitizeRolloutConfig(rawConfig = {}, fallbackConfig = DEFAULT_ROLLOUT_CONFIG) {
+    const percentRaw = Number(rawConfig?.percent ?? fallbackConfig.percent);
+    const percent = Number.isFinite(percentRaw)
+        ? Math.max(0, Math.min(100, Math.round(percentRaw)))
+        : fallbackConfig.percent;
+    const stableVersion = String(rawConfig?.stableVersion || fallbackConfig.stableVersion || "stable").trim() || "stable";
+    const latestVersion = String(rawConfig?.latestVersion || fallbackConfig.latestVersion || "latest").trim() || "latest";
+    const updatedAt = String(rawConfig?.updatedAt || fallbackConfig.updatedAt || "").trim();
+    return {
+        enabled: Boolean(rawConfig?.enabled),
+        percent,
+        stableVersion: stableVersion.slice(0, 48),
+        latestVersion: latestVersion.slice(0, 48),
+        updatedAt
+    };
+}
+
+function getRolloutConfig(data) {
+    const raw = data?.state?.rollout;
+    return sanitizeRolloutConfig(raw || {}, DEFAULT_ROLLOUT_CONFIG);
+}
+
+function hashSeedToBucket(seed) {
+    const safeSeed = String(seed || "").trim();
+    if (!safeSeed) {
+        return 0;
+    }
+    let hash = 0;
+    for (let index = 0; index < safeSeed.length; index += 1) {
+        hash = (hash * 31 + safeSeed.charCodeAt(index)) % 1000003;
+    }
+    return Math.abs(hash) % 100;
+}
+
+function resolveClientRollout(data, clientIdRaw, fallbackSeedRaw = "") {
+    const config = getRolloutConfig(data);
+    const clientId = String(clientIdRaw || "").trim();
+    const fallbackSeed = String(fallbackSeedRaw || "").trim();
+    const rolloutSeed = clientId || fallbackSeed || "unknown";
+    const bucket = hashSeedToBucket(rolloutSeed);
+    const shouldUseLatest = !config.enabled || bucket < config.percent;
+    const channel = shouldUseLatest ? "latest" : "stable";
+    const assignedVersion = shouldUseLatest ? config.latestVersion : config.stableVersion;
+    return {
+        enabled: config.enabled,
+        percent: config.percent,
+        stableVersion: config.stableVersion,
+        latestVersion: config.latestVersion,
+        channel,
+        assignedVersion,
+        bucket,
+        key: `${config.enabled ? 1 : 0}:${config.percent}:${config.stableVersion}:${config.latestVersion}:${channel}`,
+        updatedAt: config.updatedAt || ""
+    };
+}
+
 function getClientUserBindings(data) {
     const raw = data?.state?.clientUserBindings;
     if (!raw || typeof raw !== "object") {
@@ -358,6 +421,9 @@ function mergeClientRows(clients) {
             setupComplete: Boolean(client?.setupComplete),
             isMobile: Boolean(client?.isMobile),
             anonymous: Boolean(client?.anonymous),
+            rolloutChannel: String(client?.rolloutChannel || ""),
+            rolloutVersion: String(client?.rolloutVersion || ""),
+            rolloutBucket: Number(client?.rolloutBucket) || 0,
             lastSeenAt: String(client?.lastSeenAt || "")
         }))
         .filter((client) => client.clientId || client.ipAddress || client.userAgent || client.lastSeenAt)
@@ -1203,6 +1269,65 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    if (pathname === "/api/admin-rollout") {
+        if (!isAuthorizedAdmin(req)) {
+            res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Unauthorized" }));
+            return;
+        }
+
+        if (req.method === "GET") {
+            const data = readAdminData();
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
+            res.end(JSON.stringify({
+                ok: true,
+                rollout: getRolloutConfig(data)
+            }));
+            return;
+        }
+
+        if (req.method === "POST") {
+            if (!isSuperAdmin(req)) {
+                res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({ ok: false, error: "Chi Super Admin duoc sua rollout" }));
+                return;
+            }
+            try {
+                const payload = await parseJsonBody(req);
+                const data = readAdminData();
+                const nextRollout = sanitizeRolloutConfig({
+                    ...getRolloutConfig(data),
+                    ...(payload?.rollout || payload || {}),
+                    updatedAt: new Date().toISOString()
+                });
+                const nextData = {
+                    ...data,
+                    state: {
+                        ...(data.state || {}),
+                        rollout: nextRollout
+                    }
+                };
+                writeAdminData(nextData);
+                appendAdminAuditLog({
+                    type: "admin_update_rollout",
+                    username: getAdminSession(req)?.username || "unknown",
+                    role: getAdminSession(req)?.role || "unknown",
+                    ipAddress: getClientIp(req),
+                    detail: `Rollout ${nextRollout.enabled ? "Bat" : "Tat"} ${nextRollout.percent}% (${nextRollout.stableVersion} -> ${nextRollout.latestVersion})`
+                });
+                res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({
+                    ok: true,
+                    rollout: nextRollout
+                }));
+            } catch (error) {
+                res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({ ok: false, error: "Invalid JSON payload" }));
+            }
+            return;
+        }
+    }
+
     if (pathname === "/api/limore-admin-data") {
         if (req.method === "GET") {
             const data = readAdminData();
@@ -1211,11 +1336,13 @@ const server = http.createServer(async (req, res) => {
             const clientUserBindings = getClientUserBindings(data);
             const ipUserBindings = getIpUserBindings(data);
             const rememberedCurrentUserId = clientUserBindings[clientId] || ipUserBindings[clientIp] || "";
+            const rollout = resolveClientRollout(data, clientId, clientIp);
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
             res.end(JSON.stringify({
                 ok: true,
                 data,
-                rememberedCurrentUserId
+                rememberedCurrentUserId,
+                rollout
             }));
             return;
         }
@@ -1226,6 +1353,11 @@ const server = http.createServer(async (req, res) => {
                 if (payload?.state?.blockedClientIds !== undefined && !isAuthorizedAdmin(req)) {
                     res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
                     res.end(JSON.stringify({ ok: false, error: "Admin auth required for blocked clients" }));
+                    return;
+                }
+                if (payload?.state?.rollout !== undefined && !isAuthorizedAdmin(req)) {
+                    res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+                    res.end(JSON.stringify({ ok: false, error: "Admin auth required for rollout settings" }));
                     return;
                 }
                 const existing = readAdminData();
@@ -1251,6 +1383,15 @@ const server = http.createServer(async (req, res) => {
                         ...(payload.state || {})
                     }
                 };
+                if (!isSuperAdmin(req)) {
+                    nextData.state.rollout = getRolloutConfig(existing);
+                } else if (payload?.state?.rollout !== undefined) {
+                    nextData.state.rollout = sanitizeRolloutConfig({
+                        ...getRolloutConfig(existing),
+                        ...(payload?.state?.rollout || {}),
+                        updatedAt: new Date().toISOString()
+                    });
+                }
                 writeAdminData(nextData);
                 if (session) {
                     appendAdminAuditLog({
@@ -1310,6 +1451,7 @@ const server = http.createServer(async (req, res) => {
 
                 const firewallRules = getFirewallRules(data);
                 const blockedByFirewall = isIpBlocked(clientIp, firewallRules);
+                const rollout = resolveClientRollout(data, clientId, clientIp);
 
                 const nextClient = {
                     clientId,
@@ -1323,6 +1465,9 @@ const server = http.createServer(async (req, res) => {
                     setupComplete: Boolean(payload.setupComplete),
                     isMobile: Boolean(payload.isMobile),
                     anonymous: Boolean(payload.anonymous),
+                    rolloutChannel: rollout.channel,
+                    rolloutVersion: rollout.assignedVersion,
+                    rolloutBucket: rollout.bucket,
                     lastSeenAt: new Date().toISOString()
                 };
 
@@ -1356,7 +1501,8 @@ const server = http.createServer(async (req, res) => {
                     res.end(JSON.stringify({
                         ok: true,
                         blocked: true,
-                        blockedByFirewall: true
+                        blockedByFirewall: true,
+                        rollout
                     }));
                     return;
                 }
@@ -1440,7 +1586,8 @@ const server = http.createServer(async (req, res) => {
                 res.end(JSON.stringify({
                     ok: true,
                     blocked: blockedClientIds.includes(clientId),
-                    blockedByFirewall: false
+                    blockedByFirewall: false,
+                    rollout
                 }));
             } catch (error) {
                 res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });

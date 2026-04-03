@@ -274,7 +274,9 @@ const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
 const LIMORE_CLIENTS_API = "/api/limore-clients";
 const LIMORE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
 const DESKTOP_CURRENT_USER_KEY = "win11_current_user_id_v1";
+const LIMORE_ROLLOUT_ASSIGNMENT_KEY = "win11_rollout_assignment_v1";
 let blockedClientIds = [];
+let currentRolloutAssignment = null;
 
 function buildSteamHeaderImage(appId) {
     return `${STEAM_ASSET_BASE_URL}/${appId}/header.jpg`;
@@ -402,6 +404,10 @@ function getOrCreateClientId() {
     }
 }
 
+function getRolloutFallbackSeed() {
+    return `${window.location.hostname || ""}|${navigator.userAgent || ""}`;
+}
+
 function getClientDeviceType() {
     if (isMobileLikeViewport()) {
         return detectMobileDeviceClass();
@@ -454,6 +460,29 @@ function sendClientHeartbeat(force = false) {
             }
 
             const currentClientId = getOrCreateClientId();
+            if (responsePayload.rollout && typeof responsePayload.rollout === "object") {
+                const currentData = loadLimoreAdminData();
+                const rolloutConfig = sanitizeRolloutConfig(
+                    responsePayload.rollout,
+                    currentData.state?.rollout || getDefaultLimoreAdminData().state.rollout
+                );
+                applyRolloutAssignment(
+                    resolveRolloutAssignment(rolloutConfig, currentClientId, getRolloutFallbackSeed()),
+                    { persist: true, reloadIfChanged: true }
+                );
+                limoreAdminDataCache = mergeLimoreAdminData({
+                    ...currentData,
+                    state: {
+                        ...(currentData.state || {}),
+                        rollout: rolloutConfig
+                    }
+                });
+                try {
+                    localStorage.setItem(LIMORE_ADMIN_DATA_KEY, JSON.stringify(limoreAdminDataCache));
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+            }
             if (responsePayload.blocked) {
                 if (!blockedClientIds.includes(currentClientId)) {
                     blockedClientIds = [...blockedClientIds, currentClientId];
@@ -473,6 +502,98 @@ function bindClientHeartbeatActivity() {
     });
 }
 
+function sanitizeRolloutConfig(rawConfig = {}, fallbackConfig = { enabled: false, percent: 100, stableVersion: "stable", latestVersion: "latest", updatedAt: "" }) {
+    const percentRaw = Number(rawConfig?.percent ?? fallbackConfig.percent);
+    const percent = Number.isFinite(percentRaw)
+        ? Math.max(0, Math.min(100, Math.round(percentRaw)))
+        : fallbackConfig.percent;
+    const stableVersion = String(rawConfig?.stableVersion || fallbackConfig.stableVersion || "stable").trim() || "stable";
+    const latestVersion = String(rawConfig?.latestVersion || fallbackConfig.latestVersion || "latest").trim() || "latest";
+    return {
+        enabled: Boolean(rawConfig?.enabled),
+        percent,
+        stableVersion: stableVersion.slice(0, 48),
+        latestVersion: latestVersion.slice(0, 48),
+        updatedAt: String(rawConfig?.updatedAt || fallbackConfig.updatedAt || "").trim()
+    };
+}
+
+function hashSeedToBucket(seed) {
+    const safeSeed = String(seed || "").trim();
+    if (!safeSeed) {
+        return 0;
+    }
+    let hash = 0;
+    for (let index = 0; index < safeSeed.length; index += 1) {
+        hash = (hash * 31 + safeSeed.charCodeAt(index)) % 1000003;
+    }
+    return Math.abs(hash) % 100;
+}
+
+function resolveRolloutAssignment(rawConfig, clientId, fallbackSeed = "") {
+    const config = sanitizeRolloutConfig(rawConfig);
+    const rolloutSeed = String(clientId || "").trim() || String(fallbackSeed || "").trim() || "unknown";
+    const bucket = hashSeedToBucket(rolloutSeed);
+    const isLatest = !config.enabled || bucket < config.percent;
+    const channel = isLatest ? "latest" : "stable";
+    const assignedVersion = isLatest ? config.latestVersion : config.stableVersion;
+    return {
+        enabled: config.enabled,
+        percent: config.percent,
+        stableVersion: config.stableVersion,
+        latestVersion: config.latestVersion,
+        channel,
+        assignedVersion,
+        bucket,
+        key: `${config.enabled ? 1 : 0}:${config.percent}:${config.stableVersion}:${config.latestVersion}:${channel}`,
+        updatedAt: config.updatedAt || ""
+    };
+}
+
+function applyRolloutAssignment(nextAssignment, options = {}) {
+    if (!nextAssignment || typeof nextAssignment !== "object") {
+        return;
+    }
+    const shouldPersist = options.persist !== false;
+    const shouldReloadOnChange = Boolean(options.reloadIfChanged);
+    const previousKey = currentRolloutAssignment?.key || "";
+    currentRolloutAssignment = {
+        ...nextAssignment
+    };
+    window.__LIMORE_ROLLOUT = currentRolloutAssignment;
+    document.body.dataset.rolloutChannel = currentRolloutAssignment.channel || "latest";
+    document.body.dataset.rolloutVersion = currentRolloutAssignment.assignedVersion || "";
+    if (shouldPersist) {
+        try {
+            localStorage.setItem(LIMORE_ROLLOUT_ASSIGNMENT_KEY, JSON.stringify(currentRolloutAssignment));
+        } catch (error) {
+            // Ignore storage failures.
+        }
+    }
+    if (shouldReloadOnChange && previousKey && previousKey !== currentRolloutAssignment.key) {
+        window.location.reload();
+    }
+}
+
+function initializeRolloutFromLocalCache() {
+    const localData = loadLimoreAdminData();
+    const fallbackSeed = getRolloutFallbackSeed();
+    const localAssignment = resolveRolloutAssignment(localData?.state?.rollout, getOrCreateClientId(), fallbackSeed);
+    try {
+        const storedRaw = localStorage.getItem(LIMORE_ROLLOUT_ASSIGNMENT_KEY);
+        if (storedRaw) {
+            const storedAssignment = JSON.parse(storedRaw);
+            if (storedAssignment && typeof storedAssignment === "object" && storedAssignment.key) {
+                applyRolloutAssignment(storedAssignment, { persist: false, reloadIfChanged: false });
+                return;
+            }
+        }
+    } catch (error) {
+        // Ignore storage parse failures.
+    }
+    applyRolloutAssignment(localAssignment, { persist: true, reloadIfChanged: false });
+}
+
 function getDefaultLimoreAdminData() {
     return {
         games: cloneJson(defaultLimoreCloudLibrary),
@@ -481,7 +602,14 @@ function getDefaultLimoreAdminData() {
         state: {
             currentUserId: defaultDesktopUsers[0].id,
             setupComplete: false,
-            blockedClientIds: []
+            blockedClientIds: [],
+            rollout: {
+                enabled: false,
+                percent: 100,
+                stableVersion: "stable",
+                latestVersion: "latest",
+                updatedAt: ""
+            }
         }
     };
 }
@@ -508,7 +636,8 @@ function mergeLimoreAdminData(rawData = {}) {
             setupComplete: rawData?.state?.setupComplete === undefined ? true : Boolean(rawData?.state?.setupComplete),
             blockedClientIds: Array.isArray(rawData?.state?.blockedClientIds)
                 ? rawData.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
-                : []
+                : [],
+            rollout: sanitizeRolloutConfig(rawData?.state?.rollout, defaults.state.rollout)
         }
     };
 }
@@ -544,13 +673,22 @@ async function fetchLimoreAdminDataFromServer() {
             throw new Error("Could not load admin data");
         }
         const payload = await response.json();
+        const rolloutConfig = sanitizeRolloutConfig(
+            payload?.rollout,
+            (payload?.data || {}).state?.rollout || getDefaultLimoreAdminData().state.rollout
+        );
         limoreAdminDataCache = mergeLimoreAdminData({
             ...(payload?.data || {}),
             state: {
                 ...((payload?.data || {}).state || {}),
-                rememberedCurrentUserId: String(payload?.rememberedCurrentUserId || "")
+                rememberedCurrentUserId: String(payload?.rememberedCurrentUserId || ""),
+                rollout: rolloutConfig
             }
         });
+        applyRolloutAssignment(
+            resolveRolloutAssignment(rolloutConfig, getOrCreateClientId(), getRolloutFallbackSeed()),
+            { persist: true, reloadIfChanged: true }
+        );
         try {
             localStorage.setItem(LIMORE_ADMIN_DATA_KEY, JSON.stringify(limoreAdminDataCache));
         } catch (error) {
@@ -608,21 +746,27 @@ function getLimoreVisualSignature(data = loadLimoreAdminData()) {
 
 function persistLimoreAdminData(partialData = {}) {
     const currentData = loadLimoreAdminData();
+    const nextState = partialData.state ? {
+        ...(currentData.state || {}),
+        currentUserId: String(partialData.state.currentUserId || currentData.state.currentUserId || defaultDesktopUsers[0].id),
+        setupComplete: partialData.state.setupComplete === undefined
+            ? Boolean(currentData.state.setupComplete)
+            : Boolean(partialData.state.setupComplete),
+        blockedClientIds: Array.isArray(partialData.state.blockedClientIds)
+            ? partialData.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
+            : (Array.isArray(currentData.state?.blockedClientIds) ? currentData.state.blockedClientIds : []),
+        rollout: sanitizeRolloutConfig(
+            partialData.state.rollout,
+            currentData.state?.rollout || getDefaultLimoreAdminData().state.rollout
+        )
+    } : (currentData.state || getDefaultLimoreAdminData().state);
+
     limoreAdminDataCache = {
         games: Array.isArray(partialData.games) ? partialData.games : currentData.games,
         packages: Array.isArray(partialData.packages) ? partialData.packages : currentData.packages,
         users: Array.isArray(partialData.users) ? partialData.users : currentData.users,
         clients: Array.isArray(partialData.clients) ? partialData.clients : currentData.clients,
-        state: partialData.state ? {
-            currentUserId: String(partialData.state.currentUserId || currentData.state.currentUserId || defaultDesktopUsers[0].id),
-            setupComplete: partialData.state.setupComplete === undefined
-                ? Boolean(currentData.state.setupComplete)
-                : Boolean(partialData.state.setupComplete)
-            ,
-            blockedClientIds: Array.isArray(partialData.state.blockedClientIds)
-                ? partialData.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
-                : (Array.isArray(currentData.state?.blockedClientIds) ? currentData.state.blockedClientIds : [])
-        } : currentData.state
+        state: nextState
     };
 
     try {
@@ -631,10 +775,20 @@ function persistLimoreAdminData(partialData = {}) {
         // Ignore storage failures to keep the app responsive.
     }
 
+    const requestPayload = {
+        games: limoreAdminDataCache.games,
+        packages: limoreAdminDataCache.packages,
+        users: limoreAdminDataCache.users,
+        state: {
+            currentUserId: String(limoreAdminDataCache.state?.currentUserId || ""),
+            setupComplete: Boolean(limoreAdminDataCache.state?.setupComplete)
+        }
+    };
+
     fetch(LIMORE_ADMIN_DATA_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(limoreAdminDataCache)
+        body: JSON.stringify(requestPayload)
     }).catch(() => {});
 }
 
@@ -655,6 +809,10 @@ function applyLimoreAdminData(data = loadLimoreAdminData()) {
     blockedClientIds = Array.isArray(data.state?.blockedClientIds)
         ? data.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
+    applyRolloutAssignment(
+        resolveRolloutAssignment(data?.state?.rollout, getOrCreateClientId(), getRolloutFallbackSeed()),
+        { persist: true, reloadIfChanged: false }
+    );
     const currentUser = getCurrentDesktopUser();
     limoreCloudState.balance = Number(currentUser.balance) || 0;
     limoreCloudState.activePackageId = String(currentUser.activePackageId || "");
@@ -5193,4 +5351,5 @@ function registerPwaServiceWorker() {
 }
 
 registerPwaServiceWorker();
+initializeRolloutFromLocalCache();
 bootstrapApp();
