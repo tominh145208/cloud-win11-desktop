@@ -3367,6 +3367,7 @@ function buildWindow(appId, options = {}) {
     const offset = openAppMap.size * 30;
     const bounds = getDesktopBounds();
     const isChrome = appId === "chrome";
+    const isExplorerApp = appId === "thispc" || appId === "files";
     const isThisPc = appId === "thispc";
     const isLimoreCloud = app.layout === "limore-cloud";
     const isGameShowcase = app.layout === "game-showcase";
@@ -3374,7 +3375,7 @@ function buildWindow(appId, options = {}) {
     const maxUsableHeight = Math.max(WINDOW_MIN_HEIGHT, bounds.height - 20);
     let defaultWidth = isChrome
         ? Math.min(1120, Math.round(bounds.width * 0.82), maxUsableWidth)
-        : isThisPc
+        : isExplorerApp
             ? Math.min(980, Math.round(bounds.width * 0.72), maxUsableWidth)
             : isLimoreCloud
                 ? Math.min(1180, Math.round(bounds.width * 0.94), maxUsableWidth)
@@ -3383,7 +3384,7 @@ function buildWindow(appId, options = {}) {
                 : Math.min(760, Math.round(bounds.width * 0.6), maxUsableWidth);
     let defaultHeight = isChrome
         ? Math.min(700, Math.round(bounds.height * 0.82), maxUsableHeight)
-        : isThisPc
+        : isExplorerApp
             ? Math.min(620, Math.round(bounds.height * 0.72), maxUsableHeight)
             : isLimoreCloud
                 ? Math.min(700, Math.round(bounds.height * 0.92), maxUsableHeight)
@@ -3424,7 +3425,7 @@ function buildWindow(appId, options = {}) {
     const windowEl = document.createElement("div");
     windowEl.className = isChrome
         ? "app-window chrome-window"
-        : isThisPc
+        : isExplorerApp
             ? "app-window thispc-window"
             : isLimoreCloud
                 ? "app-window limore-cloud-window"
@@ -3434,7 +3435,7 @@ function buildWindow(appId, options = {}) {
     windowEl.dataset.app = appId;
     windowEl.innerHTML = isChrome
         ? buildChromeWindowMarkup(app)
-        : isThisPc
+        : isExplorerApp
             ? buildThisPcWindowMarkup(app)
             : isLimoreCloud
                 ? buildLimoreCloudWindowMarkup(app, options)
@@ -3478,7 +3479,7 @@ function buildWindow(appId, options = {}) {
         wireChromeWindow(windowEl, app);
     }
 
-    if (isThisPc) {
+    if (isExplorerApp) {
         wireThisPcWindow(windowEl);
     }
 
