@@ -1,0 +1,32 @@
+{
+  "name": "Windows 11 Dark Edition - Limore Cloud",
+  "short_name": "Limore Cloud",
+  "description": "Windows 11 web desktop va Limore Cloud gaming",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f1219",
+  "theme_color": "#0f1219",
+  "icons": [
+    {
+      "src": "assets/chrome-custom-v1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/chrome-custom-v1.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/game-cloud.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any"
+    }
+  ]
+}
