@@ -807,6 +807,13 @@
     }
 
     function getTaskbarPreviewImage(state) {
+        if (state.appId === "gamecloud") {
+            return {
+                type: "icon",
+                value: getAppInfo(state.appId).icon
+            };
+        }
+
         const imageSelectors = [
             ".game-hero-image",
             ".photos-main-image",
@@ -838,11 +845,33 @@
     }
 
     function setupPreviewTooltips() {
+        let previewCloseTimer = 0;
+
+        const schedulePreviewClose = (delayMs = 260) => {
+            if (!taskbarPreviewEl) {
+                return;
+            }
+            if (previewCloseTimer) {
+                window.clearTimeout(previewCloseTimer);
+            }
+            previewCloseTimer = window.setTimeout(() => {
+                taskbarPreviewEl.classList.remove("open");
+            }, delayMs);
+        };
+
+        const keepPreviewOpen = () => {
+            if (previewCloseTimer) {
+                window.clearTimeout(previewCloseTimer);
+                previewCloseTimer = 0;
+            }
+        };
+
         document.addEventListener("mouseover", (event) => {
             const button = event.target.closest(".taskbar-app, .running-task-icon");
             if (!button || !taskbarPreviewEl) {
                 return;
             }
+            keepPreviewOpen();
             const appId = button.dataset.app || "";
             const states = Array.from(openAppMap.values()).filter((state) => getTaskbarAppId(state.appId) === appId);
             if (!states.length) {
@@ -863,8 +892,12 @@
                 `;
             }).join("");
             const rect = button.getBoundingClientRect();
-            taskbarPreviewEl.style.left = `${Math.max(10, rect.left - 96)}px`;
-            taskbarPreviewEl.style.bottom = "58px";
+            const previewWidth = taskbarPreviewEl.offsetWidth || 260;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const targetLeft = rect.left + rect.width / 2 - previewWidth / 2;
+            const clampedLeft = Math.max(10, Math.min(targetLeft, viewportWidth - previewWidth - 10));
+            taskbarPreviewEl.style.left = `${clampedLeft}px`;
+            taskbarPreviewEl.style.bottom = "50px";
             taskbarPreviewEl.classList.add("open");
             taskbarPreviewEl.querySelectorAll("[data-preview-focus]").forEach((previewButton) => {
                 previewButton.onclick = () => focusApp(previewButton.dataset.previewFocus || "");
@@ -876,9 +909,12 @@
                 return;
             }
             if (!event.relatedTarget.closest(".taskbar-preview")) {
-                taskbarPreviewEl?.classList.remove("open");
+                schedulePreviewClose();
             }
         });
+
+        taskbarPreviewEl?.addEventListener("mouseenter", keepPreviewOpen);
+        taskbarPreviewEl?.addEventListener("mouseleave", () => schedulePreviewClose(180));
     }
 
     const originalBuildWindow = buildWindow;
