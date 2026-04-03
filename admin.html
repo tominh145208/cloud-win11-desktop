@@ -17,8 +17,16 @@
             <h1>Dang nhap admin</h1>
             <p class="admin-copy">Trang nay da duoc khoa. Chi ai biet link va mat khau moi vao duoc quan tri.</p>
             <label class="field">
+                <span>Tai khoan admin</span>
+                <input id="admin-username-input" type="text" placeholder="admin" autocomplete="username">
+            </label>
+            <label class="field">
                 <span>Mat khau admin</span>
                 <input id="admin-password-input" type="password" placeholder="Nhap mat khau" autocomplete="current-password">
+            </label>
+            <label class="field">
+                <span>OTP (neu dang bat)</span>
+                <input id="admin-otp-input" type="text" placeholder="123456" inputmode="numeric" autocomplete="one-time-code">
             </label>
             <button id="admin-login-button" type="submit" class="admin-btn is-primary">Vao admin</button>
             <p id="admin-auth-error" class="admin-auth-error" aria-live="polite"></p>
@@ -97,6 +105,31 @@
                             <strong id="overview-games">0</strong>
                         </article>
                     </section>
+
+                    <section class="admin-grid">
+                        <article class="admin-panel">
+                            <div class="panel-head">
+                                <h2>Dashboard online</h2>
+                                <p>Thong ke so lan client online theo gio va theo ngay.</p>
+                            </div>
+                            <div class="panel-body">
+                                <canvas id="online-chart-canvas" height="220"></canvas>
+                            </div>
+                        </article>
+                        <article class="admin-panel">
+                            <div class="panel-head">
+                                <h2>Canh bao IP la</h2>
+                                <p>Canh bao realtime khi user cu dang nhap bang IP moi.</p>
+                            </div>
+                            <div class="panel-body">
+                                <div class="panel-inline-actions">
+                                    <button id="refresh-alerts-button" type="button" class="admin-btn is-small">Tai lai</button>
+                                    <button id="ack-all-alerts-button" type="button" class="admin-btn is-small">Da doc tat ca</button>
+                                </div>
+                                <div id="alerts-list" class="simple-list"></div>
+                            </div>
+                        </article>
+                    </section>
                 </section>
 
                 <section class="admin-section" data-admin-section="manage">
@@ -157,13 +190,82 @@
                         <span>Nhap lai mat khau moi</span>
                         <input id="admin-confirm-password" type="password" placeholder="Nhap lai mat khau moi">
                     </label>
+                    <label class="field">
+                        <span>Role dang dang nhap</span>
+                        <input id="admin-role-input" type="text" placeholder="mod / super_admin" readonly>
+                    </label>
+                    <label class="field">
+                        <span>Bat OTP</span>
+                        <select id="otp-enabled-input">
+                            <option value="0">Tat</option>
+                            <option value="1">Bat</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Ma OTP</span>
+                        <input id="otp-code-input" type="text" placeholder="123456">
+                    </label>
                     <button id="change-password-button" type="button" class="admin-btn is-primary">Doi mat khau</button>
+                    <button id="save-otp-button" type="button" class="admin-btn">Luu OTP</button>
                 </div>
                 <div class="panel-body notes">
                     <p>1. Sua thong tin game, goi hoac so du.</p>
                     <p>2. Bam <strong>Luu tat ca</strong>.</p>
                     <p>3. Quay lai desktop chinh, Limore Cloud se dong bo. Neu app dang mo, no se tu refresh lai.</p>
                 </div>
+                        </article>
+                    </section>
+
+                    <section class="admin-grid">
+                        <article class="admin-panel">
+                            <div class="panel-head">
+                                <h2>Phan quyen admin</h2>
+                                <p>Super Admin / Mod. Mod khong duoc sua so du user.</p>
+                            </div>
+                            <div class="panel-body">
+                                <div class="game-form-grid user-form-grid">
+                                    <label class="field">
+                                        <span>Username</span>
+                                        <input id="role-username-input" type="text" placeholder="mod1">
+                                    </label>
+                                    <label class="field">
+                                        <span>Role</span>
+                                        <select id="role-level-input">
+                                            <option value="mod">Mod</option>
+                                            <option value="super_admin">Super Admin</option>
+                                        </select>
+                                    </label>
+                                    <label class="field">
+                                        <span>Mat khau (de trong neu giu nguyen)</span>
+                                        <input id="role-password-input" type="text" placeholder="12345">
+                                    </label>
+                                    <button id="save-role-user-button" type="button" class="admin-btn is-primary">Them / Sua role user</button>
+                                </div>
+                                <div class="games-table-wrap">
+                                    <table class="games-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Username</th>
+                                                <th>Role</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="role-users-table-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="admin-panel">
+                            <div class="panel-head">
+                                <h2>Lich su thao tac admin</h2>
+                                <p>Ai sua gi, luc nao, tu IP nao.</p>
+                            </div>
+                            <div class="panel-body">
+                                <div class="panel-inline-actions">
+                                    <button id="refresh-audit-button" type="button" class="admin-btn is-small">Tai lai log</button>
+                                </div>
+                                <div id="audit-log-list" class="simple-list"></div>
+                            </div>
                         </article>
                     </section>
 
@@ -224,6 +326,35 @@
                 <p>Danh sach trinh duyet, thiet bi va user an danh dang vao he thong.</p>
             </div>
             <div class="panel-body">
+                <div class="admin-filter-bar">
+                    <label class="field">
+                        <span>Online</span>
+                        <select id="client-filter-online">
+                            <option value="all">Tat ca</option>
+                            <option value="online">Online</option>
+                            <option value="offline">Offline</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Loai may</span>
+                        <select id="client-filter-device">
+                            <option value="all">Tat ca</option>
+                            <option value="desktop">Desktop</option>
+                            <option value="mobile">Mobile</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>IP</span>
+                        <input id="client-filter-ip" type="text" placeholder="192.168...">
+                    </label>
+                    <label class="field">
+                        <span>Ten user</span>
+                        <input id="client-filter-user" type="text" placeholder="Dz Minh">
+                    </label>
+                    <button id="client-filter-reset-button" type="button" class="admin-btn">Xoa loc</button>
+                    <button id="dedupe-clients-button" type="button" class="admin-btn">Gop trung thu cong</button>
+                    <button id="export-clients-csv-button" type="button" class="admin-btn is-primary">Xuat CSV</button>
+                </div>
                 <div class="games-table-wrap">
                     <table class="games-table">
                         <thead>
@@ -240,6 +371,23 @@
                     </table>
                 </div>
             </div>
+                    </section>
+
+                    <section class="admin-panel">
+                        <div class="panel-head">
+                            <h2>Tuong lua mini</h2>
+                            <p>Chan theo IP, CIDR hoac range. Vi du: 1.2.3.4, 1.2.3.0/24, 1.2.3.4-1.2.3.30.</p>
+                        </div>
+                        <div class="panel-body">
+                            <div class="game-form-grid user-form-grid">
+                                <label class="field field-wide">
+                                    <span>Rule chan</span>
+                                    <input id="firewall-rule-input" type="text" placeholder="1.2.3.0/24">
+                                </label>
+                                <button id="add-firewall-rule-button" type="button" class="admin-btn is-primary">Them rule</button>
+                            </div>
+                            <div id="firewall-rules-list" class="simple-list"></div>
+                        </div>
                     </section>
                 </section>
 
@@ -315,6 +463,16 @@
             </div>
         </div>
     </main>
+
+    <div id="device-detail-modal" class="admin-modal" hidden>
+        <div class="admin-modal-card">
+            <div class="admin-modal-head">
+                <h3>Chi tiet thiet bi</h3>
+                <button id="close-device-detail-button" type="button" class="admin-btn is-small">Dong</button>
+            </div>
+            <div id="device-detail-body" class="admin-modal-body"></div>
+        </div>
+    </div>
 
     <script src="admin.js"></script>
 </body>

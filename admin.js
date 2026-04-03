@@ -5,6 +5,15 @@ const LIMORE_CLIENTS_API = "/api/limore-clients";
 const ADMIN_AUTH_LOGIN_API = "/api/admin-auth/login";
 const ADMIN_AUTH_VERIFY_API = "/api/admin-auth/verify";
 const ADMIN_AUTH_CHANGE_PASSWORD_API = "/api/admin-auth/change-password";
+const ADMIN_AUTH_OTP_API = "/api/admin-auth/otp";
+const ADMIN_AUTH_USERS_API = "/api/admin-auth/users";
+const ADMIN_AUDIT_LOG_API = "/api/admin-audit-log";
+const ADMIN_FIREWALL_API = "/api/admin-firewall";
+const ADMIN_DEVICES_DEDUPE_API = "/api/admin-devices/dedupe";
+const ADMIN_DEVICES_EXPORT_API = "/api/admin-devices/export";
+const ADMIN_DEVICE_DETAIL_API = "/api/admin-devices/detail";
+const ADMIN_ALERTS_API = "/api/admin-alerts";
+const ADMIN_DASHBOARD_API = "/api/admin-dashboard";
 const ADMIN_TOKEN_KEY = "win11_admin_session_token_v1";
 
 const defaultGames = [
@@ -88,7 +97,11 @@ const defaultPackages = [
 const defaultState = {
     currentUserId: "dzminh",
     setupComplete: false,
-    blockedClientIds: []
+    blockedClientIds: [],
+    firewallRules: [],
+    ipAlerts: [],
+    clientHistory: [],
+    knownIpsByUser: {}
 };
 
 const defaultUsers = [
@@ -130,12 +143,42 @@ const adminShell = document.getElementById("admin-shell");
 const adminAuthScreen = document.getElementById("admin-auth-screen");
 const adminLoginForm = document.getElementById("admin-login-form");
 const adminPasswordInput = document.getElementById("admin-password-input");
+const adminUsernameInput = document.getElementById("admin-username-input");
+const adminOtpInput = document.getElementById("admin-otp-input");
 const adminLoginButton = document.getElementById("admin-login-button");
 const adminAuthError = document.getElementById("admin-auth-error");
 const adminCurrentPasswordInput = document.getElementById("admin-current-password");
 const adminNewPasswordInput = document.getElementById("admin-new-password");
 const adminConfirmPasswordInput = document.getElementById("admin-confirm-password");
 const changePasswordButton = document.getElementById("change-password-button");
+const adminRoleInput = document.getElementById("admin-role-input");
+const otpEnabledInput = document.getElementById("otp-enabled-input");
+const otpCodeInput = document.getElementById("otp-code-input");
+const saveOtpButton = document.getElementById("save-otp-button");
+const roleUsernameInput = document.getElementById("role-username-input");
+const roleLevelInput = document.getElementById("role-level-input");
+const rolePasswordInput = document.getElementById("role-password-input");
+const saveRoleUserButton = document.getElementById("save-role-user-button");
+const roleUsersTableBody = document.getElementById("role-users-table-body");
+const refreshAuditButton = document.getElementById("refresh-audit-button");
+const auditLogList = document.getElementById("audit-log-list");
+const onlineChartCanvas = document.getElementById("online-chart-canvas");
+const alertsList = document.getElementById("alerts-list");
+const refreshAlertsButton = document.getElementById("refresh-alerts-button");
+const ackAllAlertsButton = document.getElementById("ack-all-alerts-button");
+const clientFilterOnline = document.getElementById("client-filter-online");
+const clientFilterDevice = document.getElementById("client-filter-device");
+const clientFilterIp = document.getElementById("client-filter-ip");
+const clientFilterUser = document.getElementById("client-filter-user");
+const clientFilterResetButton = document.getElementById("client-filter-reset-button");
+const dedupeClientsButton = document.getElementById("dedupe-clients-button");
+const exportClientsCsvButton = document.getElementById("export-clients-csv-button");
+const firewallRuleInput = document.getElementById("firewall-rule-input");
+const addFirewallRuleButton = document.getElementById("add-firewall-rule-button");
+const firewallRulesList = document.getElementById("firewall-rules-list");
+const deviceDetailModal = document.getElementById("device-detail-modal");
+const closeDeviceDetailButton = document.getElementById("close-device-detail-button");
+const deviceDetailBody = document.getElementById("device-detail-body");
 const adminNavButtons = Array.from(document.querySelectorAll(".admin-nav-btn[data-admin-section-target]"));
 const adminSections = Array.from(document.querySelectorAll(".admin-section[data-admin-section]"));
 
@@ -144,6 +187,19 @@ let clientRows = [];
 let adminToken = "";
 let adminLiveSyncTimer = 0;
 let activeAdminSection = "overview";
+let adminRole = "mod";
+let adminUsername = "admin";
+let adminRoleUsers = [];
+let adminAuditLogs = [];
+let adminAlerts = [];
+let adminFirewallRules = [];
+let dashboardStats = { hourly: [], daily: [] };
+const clientFilters = {
+    online: "all",
+    device: "all",
+    ip: "",
+    user: ""
+};
 
 function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
@@ -199,7 +255,15 @@ function mergeAdminData(rawData = {}) {
             setupComplete: rawData?.state?.setupComplete === undefined ? true : Boolean(rawData?.state?.setupComplete),
             blockedClientIds: Array.isArray(rawData?.state?.blockedClientIds)
                 ? rawData.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
-                : []
+                : [],
+            firewallRules: Array.isArray(rawData?.state?.firewallRules)
+                ? rawData.state.firewallRules.map((value) => String(value || "").trim()).filter(Boolean)
+                : [],
+            ipAlerts: Array.isArray(rawData?.state?.ipAlerts) ? rawData.state.ipAlerts : [],
+            clientHistory: Array.isArray(rawData?.state?.clientHistory) ? rawData.state.clientHistory : [],
+            knownIpsByUser: rawData?.state?.knownIpsByUser && typeof rawData.state.knownIpsByUser === "object"
+                ? rawData.state.knownIpsByUser
+                : {}
         }
     };
 }
@@ -222,6 +286,49 @@ function storeAdminToken(token) {
         return;
     }
     sessionStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+}
+
+function isSuperAdmin() {
+    return adminRole === "super_admin";
+}
+
+function applyRolePermissions() {
+    if (adminRoleInput) {
+        adminRoleInput.value = adminRole;
+    }
+
+    const canEditBalance = isSuperAdmin();
+    const balanceTargets = [
+        balanceInput,
+        ...Array.from(document.querySelectorAll('#users-table-body [data-field="balance"]'))
+    ];
+    balanceTargets.forEach((input) => {
+        if (!input) {
+            return;
+        }
+        if (canEditBalance) {
+            input.removeAttribute("disabled");
+        } else {
+            input.setAttribute("disabled", "");
+        }
+    });
+
+    if (saveOtpButton) {
+        saveOtpButton.disabled = !isSuperAdmin();
+    }
+    if (saveRoleUserButton) {
+        saveRoleUserButton.disabled = !isSuperAdmin();
+    }
+    [roleUsernameInput, roleLevelInput, rolePasswordInput, otpEnabledInput, otpCodeInput].forEach((input) => {
+        if (!input) {
+            return;
+        }
+        if (isSuperAdmin()) {
+            input.removeAttribute("disabled");
+        } else {
+            input.setAttribute("disabled", "");
+        }
+    });
 }
 
 function setAdminLockedState(message = "") {
@@ -305,6 +412,154 @@ async function fetchClientRows() {
     }
 }
 
+async function fetchOtpSettings() {
+    try {
+        const response = await fetch(buildNoCacheUrl(ADMIN_AUTH_OTP_API), {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("otp_fetch_failed");
+        }
+        const payload = await response.json();
+        if (otpEnabledInput) {
+            otpEnabledInput.value = payload?.otpEnabled ? "1" : "0";
+        }
+        if (otpCodeInput) {
+            otpCodeInput.value = String(payload?.otpCode || "");
+        }
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            throw error;
+        }
+    }
+}
+
+async function fetchRoleUsers() {
+    if (!isSuperAdmin()) {
+        adminRoleUsers = [];
+        renderRoleUsersTable();
+        return;
+    }
+    try {
+        const response = await fetch(buildNoCacheUrl(ADMIN_AUTH_USERS_API), {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("role_users_fetch_failed");
+        }
+        const payload = await response.json();
+        adminRoleUsers = Array.isArray(payload?.users) ? payload.users : [];
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            throw error;
+        }
+        adminRoleUsers = [];
+    }
+    renderRoleUsersTable();
+}
+
+async function fetchAuditLogs() {
+    try {
+        const response = await fetch(buildNoCacheUrl(ADMIN_AUDIT_LOG_API), {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("audit_fetch_failed");
+        }
+        const payload = await response.json();
+        adminAuditLogs = Array.isArray(payload?.logs) ? payload.logs : [];
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            throw error;
+        }
+        adminAuditLogs = [];
+    }
+    renderAuditLogs();
+}
+
+async function fetchAlerts() {
+    try {
+        const response = await fetch(buildNoCacheUrl(ADMIN_ALERTS_API), {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("alerts_fetch_failed");
+        }
+        const payload = await response.json();
+        adminAlerts = Array.isArray(payload?.alerts) ? payload.alerts : [];
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            throw error;
+        }
+        adminAlerts = [];
+    }
+    renderAlerts();
+}
+
+async function fetchFirewallRules() {
+    try {
+        const response = await fetch(buildNoCacheUrl(ADMIN_FIREWALL_API), {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("firewall_fetch_failed");
+        }
+        const payload = await response.json();
+        adminFirewallRules = Array.isArray(payload?.rules) ? payload.rules : [];
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            throw error;
+        }
+        adminFirewallRules = Array.isArray(adminData?.state?.firewallRules) ? adminData.state.firewallRules : [];
+    }
+    renderFirewallRules();
+}
+
+async function fetchDashboardStats() {
+    try {
+        const response = await fetch(buildNoCacheUrl(ADMIN_DASHBOARD_API), {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("dashboard_fetch_failed");
+        }
+        const payload = await response.json();
+        dashboardStats = payload?.stats && typeof payload.stats === "object"
+            ? payload.stats
+            : { hourly: [], daily: [] };
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            throw error;
+        }
+        dashboardStats = { hourly: [], daily: [] };
+    }
+    renderDashboardChart();
+}
+
 function formatBalance(value) {
     const numericValue = Number(value) || 0;
     if (numericValue <= 0) {
@@ -332,6 +587,146 @@ function getBlockedClientIds() {
     return Array.isArray(adminData?.state?.blockedClientIds)
         ? adminData.state.blockedClientIds
         : [];
+}
+
+function renderRoleUsersTable() {
+    if (!roleUsersTableBody) {
+        return;
+    }
+    if (!isSuperAdmin()) {
+        roleUsersTableBody.innerHTML = `
+            <tr><td colspan="3">Chi Super Admin moi xem/sua duoc danh sach role user.</td></tr>
+        `;
+        return;
+    }
+    if (!adminRoleUsers.length) {
+        roleUsersTableBody.innerHTML = `<tr><td colspan="3">Chua co role user nao.</td></tr>`;
+        return;
+    }
+    roleUsersTableBody.innerHTML = adminRoleUsers.map((entry) => `
+        <tr data-username="${entry.username}">
+            <td>${entry.username}</td>
+            <td>${entry.role}</td>
+            <td>
+                <button type="button" class="table-delete-btn" data-action="delete-role-user" data-username="${entry.username}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function renderAuditLogs() {
+    if (!auditLogList) {
+        return;
+    }
+    if (!adminAuditLogs.length) {
+        auditLogList.innerHTML = `<div class="simple-list-item"><span>Chua co lich su thao tac.</span></div>`;
+        return;
+    }
+    auditLogList.innerHTML = adminAuditLogs.slice(0, 80).map((entry) => `
+        <div class="simple-list-item">
+            <strong>${entry.type || "event"} • ${entry.username || "-"}</strong>
+            <span>${entry.detail || "-"}</span>
+            <span>${new Date(entry.at || Date.now()).toLocaleString("vi-VN")} • IP: ${entry.ipAddress || "-"}</span>
+        </div>
+    `).join("");
+}
+
+function renderAlerts() {
+    if (!alertsList) {
+        return;
+    }
+    if (!adminAlerts.length) {
+        alertsList.innerHTML = `<div class="simple-list-item"><span>Khong co canh bao moi.</span></div>`;
+        return;
+    }
+    alertsList.innerHTML = adminAlerts.slice(0, 80).map((alert) => `
+        <div class="simple-list-item">
+            <strong>${alert.ack ? "Da doc" : "Moi"} • ${alert.userId}</strong>
+            <span>IP: ${alert.ipAddress}</span>
+            <span>${new Date(alert.at || Date.now()).toLocaleString("vi-VN")}</span>
+            <div class="simple-list-actions">
+                <button type="button" class="admin-btn is-small" data-action="ack-alert" data-alert-id="${alert.id}" ${alert.ack ? "disabled" : ""}>Da doc</button>
+            </div>
+        </div>
+    `).join("");
+}
+
+function renderFirewallRules() {
+    if (!firewallRulesList) {
+        return;
+    }
+    if (!adminFirewallRules.length) {
+        firewallRulesList.innerHTML = `<div class="simple-list-item"><span>Chua co rule chan IP nao.</span></div>`;
+        return;
+    }
+    firewallRulesList.innerHTML = adminFirewallRules.map((rule, index) => `
+        <div class="simple-list-item">
+            <strong>${rule}</strong>
+            <div class="simple-list-actions">
+                <button type="button" class="admin-btn is-small" data-action="delete-firewall-rule" data-index="${index}">Xoa</button>
+            </div>
+        </div>
+    `).join("");
+}
+
+function renderDashboardChart() {
+    if (!onlineChartCanvas) {
+        return;
+    }
+    const ctx = onlineChartCanvas.getContext("2d");
+    if (!ctx) {
+        return;
+    }
+    const width = onlineChartCanvas.clientWidth || 600;
+    const height = Number(onlineChartCanvas.getAttribute("height") || 220);
+    onlineChartCanvas.width = width;
+    onlineChartCanvas.height = height;
+    ctx.clearRect(0, 0, width, height);
+
+    const hourlyValues = (Array.isArray(dashboardStats?.hourly) ? dashboardStats.hourly : []).map((entry) => Number(entry?.count || 0));
+    const dailyValues = (Array.isArray(dashboardStats?.daily) ? dashboardStats.daily : []).map((entry) => Number(entry?.count || 0));
+    const values = [...hourlyValues, ...dailyValues];
+    const maxValue = Math.max(1, ...values);
+    const leftPad = 28;
+    const rightPad = 10;
+    const topPad = 12;
+    const bottomPad = 24;
+    const chartHeight = height - topPad - bottomPad;
+
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(leftPad, topPad);
+    ctx.lineTo(leftPad, height - bottomPad);
+    ctx.lineTo(width - rightPad, height - bottomPad);
+    ctx.stroke();
+
+    const barAreaWidth = width - leftPad - rightPad;
+    const totalBars = hourlyValues.length + dailyValues.length + 1;
+    const barWidth = Math.max(2, Math.floor(barAreaWidth / Math.max(1, totalBars * 1.4)));
+    let cursorX = leftPad + 8;
+
+    hourlyValues.forEach((value) => {
+        const barHeight = Math.round((value / maxValue) * chartHeight);
+        ctx.fillStyle = "rgba(96, 170, 255, 0.8)";
+        ctx.fillRect(cursorX, height - bottomPad - barHeight, barWidth, barHeight);
+        cursorX += Math.max(4, Math.floor(barWidth * 1.35));
+    });
+
+    cursorX += 8;
+    dailyValues.forEach((value) => {
+        const barHeight = Math.round((value / maxValue) * chartHeight);
+        ctx.fillStyle = "rgba(95, 232, 174, 0.8)";
+        ctx.fillRect(cursorX, height - bottomPad - barHeight, barWidth, barHeight);
+        cursorX += Math.max(4, Math.floor(barWidth * 1.35));
+    });
+
+    ctx.fillStyle = "rgba(228, 238, 252, 0.9)";
+    ctx.font = "12px Segoe UI";
+    ctx.fillText("Gio", leftPad + 8, height - 6);
+    ctx.fillText("Ngay", Math.max(leftPad + 90, width - 90), height - 6);
 }
 
 function renderOverview() {
@@ -453,9 +848,48 @@ function renderClientsTable() {
     }
 
     const blockedClientIds = new Set(getBlockedClientIds());
-    clientsTableBody.innerHTML = mergedClientRows
+    const filteredRows = mergedClientRows
         .slice()
         .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")))
+        .filter((client) => {
+            const lastSeenAtMs = client.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
+            const isOnline = lastSeenAtMs > 0 && Date.now() - lastSeenAtMs < 180000;
+            if (clientFilters.online === "online" && !isOnline) {
+                return false;
+            }
+            if (clientFilters.online === "offline" && isOnline) {
+                return false;
+            }
+            if (clientFilters.device === "mobile" && !client.isMobile) {
+                return false;
+            }
+            if (clientFilters.device === "desktop" && client.isMobile) {
+                return false;
+            }
+
+            const ipDisplay = String(client.ipAddress || "").toLowerCase();
+            if (clientFilters.ip && !ipDisplay.includes(clientFilters.ip.toLowerCase())) {
+                return false;
+            }
+
+            const userDisplay = `${client.desktopName || ""} ${client.currentUserId || ""} ${client.limoreName || ""}`.toLowerCase();
+            if (clientFilters.user && !userDisplay.includes(clientFilters.user.toLowerCase())) {
+                return false;
+            }
+
+            return true;
+        });
+
+    if (!filteredRows.length) {
+        clientsTableBody.innerHTML = `
+            <tr>
+                <td colspan="6">Khong co thiet bi phu hop bo loc.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    clientsTableBody.innerHTML = filteredRows
         .map((client) => {
             const lastSeenAtMs = client.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
             const isOnline = lastSeenAtMs > 0 && Date.now() - lastSeenAtMs < 180000;
@@ -471,8 +905,9 @@ function renderClientsTable() {
             const userDisplay = desktopName !== "-" ? desktopName : (client.currentUserId || "Chua co user");
             const pageDisplay = client.currentPage || "/";
             const ipDisplay = client.ipAddress || "-";
+            const fingerprint = buildClientFingerprint(client);
             return `
-                <tr>
+                <tr class="client-row-clickable" data-action="open-client-detail" data-client-id="${client.clientId || ""}" data-client-fingerprint="${fingerprint}">
                     <td>
                         <div class="client-primary">${deviceTitle}</div>
                         <div class="client-secondary">${deviceMeta}</div>
@@ -498,6 +933,7 @@ function renderClientsTable() {
                             class="admin-btn is-small ${isBlocked ? "" : "is-danger"}"
                             data-action="toggle-client-block"
                             data-client-id="${client.clientId || ""}"
+                            data-no-row-open="1"
                         >
                             ${isBlocked ? "Mo lai" : "Ngat"}
                         </button>
@@ -671,8 +1107,14 @@ function renderAll() {
     renderPackagesForm();
     renderUsersTable();
     renderClientsTable();
+    renderRoleUsersTable();
+    renderAuditLogs();
+    renderAlerts();
+    renderFirewallRules();
+    renderDashboardChart();
     renderGamesTable();
     renderAdminSections();
+    applyRolePermissions();
 }
 
 function renderAdminSections() {
@@ -697,10 +1139,13 @@ function syncAccountForm() {
     }
     currentUser.desktopName = desktopNameInput.value.trim() || currentUser.desktopName;
     currentUser.limoreName = limoreNameInput.value.trim() || currentUser.limoreName;
-    currentUser.balance = Number(balanceInput.value) || 0;
+    if (isSuperAdmin()) {
+        currentUser.balance = Number(balanceInput.value) || 0;
+    }
     currentUser.activePackageId = activePackageInput.value || "";
     renderUsersTable();
     renderOverview();
+    applyRolePermissions();
 }
 
 function handleCurrentUserChange() {
@@ -755,7 +1200,9 @@ function syncUsersTable() {
         id: row.querySelector('[data-field="id"]').value.trim() || `user${index + 1}`,
         desktopName: row.querySelector('[data-field="desktopName"]').value.trim() || `User ${index + 1}`,
         limoreName: row.querySelector('[data-field="limoreName"]').value.trim() || "Anonymous",
-        balance: Number(row.querySelector('[data-field="balance"]').value) || 0,
+        balance: isSuperAdmin()
+            ? (Number(row.querySelector('[data-field="balance"]').value) || 0)
+            : Number((adminData.users[index] || {}).balance || 0),
         activePackageId: row.querySelector('[data-field="activePackageId"]').value || ""
     }));
     adminData.users = sanitizeUsers(adminData.users);
@@ -764,6 +1211,7 @@ function syncUsersTable() {
     }
     renderAccountForm();
     renderOverview();
+    applyRolePermissions();
 }
 
 async function handleSaveAll() {
@@ -875,6 +1323,9 @@ async function verifyAdminSession() {
         if (!response.ok) {
             throw new Error("invalid_session");
         }
+        const payload = await response.json().catch(() => ({}));
+        adminRole = String(payload?.role || "mod");
+        adminUsername = String(payload?.username || "admin");
         return true;
     } catch (error) {
         storeAdminToken("");
@@ -884,7 +1335,9 @@ async function verifyAdminSession() {
 
 async function handleAdminLogin(event) {
     event.preventDefault();
+    const username = adminUsernameInput?.value?.trim().toLowerCase() || "admin";
     const password = adminPasswordInput?.value || "";
+    const otpCode = adminOtpInput?.value?.trim() || "";
     if (!password.trim()) {
         if (adminAuthError) {
             adminAuthError.textContent = "Nhap mat khau admin truoc khi vao.";
@@ -902,7 +1355,11 @@ async function handleAdminLogin(event) {
         const response = await fetch(ADMIN_AUTH_LOGIN_API, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password })
+            body: JSON.stringify({
+                username,
+                password,
+                otpCode
+            })
         });
         if (response.status === 404) {
             throw new Error("Server chua cap nhat admin auth. Tat server cu va chay lai run.bat.");
@@ -913,7 +1370,12 @@ async function handleAdminLogin(event) {
         }
 
         storeAdminToken(payload.token);
+        adminRole = String(payload?.role || "mod");
+        adminUsername = String(payload?.username || username);
         adminPasswordInput.value = "";
+        if (adminOtpInput) {
+            adminOtpInput.value = "";
+        }
         setAdminUnlockedState();
         await loadAdminDashboard();
         startAdminLiveSync();
@@ -1010,10 +1472,371 @@ async function handleToggleClientBlock(clientId) {
     }
 }
 
+async function handleDedupeClients() {
+    try {
+        const response = await fetch(ADMIN_DEVICES_DEDUPE_API, {
+            method: "POST",
+            headers: getAuthHeaders()
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong gop trung duoc");
+        }
+        clientRows = Array.isArray(payload?.clients) ? payload.clients : [];
+        renderClientsTable();
+        showStatus(`Da gop trung, xoa ${Number(payload?.removed || 0)} dong trung.`);
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong gop trung duoc");
+    }
+}
+
+async function handleExportClientsCsv() {
+    try {
+        const response = await fetch(ADMIN_DEVICES_EXPORT_API, {
+            method: "GET",
+            headers: getAuthHeaders(false),
+            cache: "no-store"
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("Khong xuat duoc CSV");
+        }
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = blobUrl;
+        anchor.download = `limore-clients-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong xuat duoc CSV");
+    }
+}
+
+function closeDeviceDetailModal() {
+    deviceDetailModal?.setAttribute("hidden", "");
+    if (deviceDetailBody) {
+        deviceDetailBody.innerHTML = "";
+    }
+}
+
+async function openClientDetail(clientId, fingerprint) {
+    if (!deviceDetailModal || !deviceDetailBody) {
+        return;
+    }
+    deviceDetailModal.removeAttribute("hidden");
+    deviceDetailBody.innerHTML = `<div class="simple-list-item"><span>Dang tai chi tiet...</span></div>`;
+    try {
+        const query = new URLSearchParams();
+        if (clientId) {
+            query.set("clientId", clientId);
+        }
+        if (fingerprint) {
+            query.set("fingerprint", fingerprint);
+        }
+        const response = await fetch(`${ADMIN_DEVICE_DETAIL_API}?${query.toString()}`, {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.client) {
+            throw new Error(payload?.error || "Khong tai duoc chi tiet");
+        }
+        const client = payload.client;
+        const historyRows = Array.isArray(payload?.history) ? payload.history : [];
+        deviceDetailBody.innerHTML = `
+            <div class="admin-modal-grid">
+                <div class="admin-modal-meta"><strong>Client ID:</strong> ${client.clientId || "-"}</div>
+                <div class="admin-modal-meta"><strong>Loai may:</strong> ${getClientDeviceTitle(client)}</div>
+                <div class="admin-modal-meta"><strong>User:</strong> ${client.desktopName || client.currentUserId || "-"}</div>
+                <div class="admin-modal-meta"><strong>IP:</strong> ${client.ipAddress || "-"}</div>
+                <div class="admin-modal-meta"><strong>Trang:</strong> ${client.currentPage || "/"}</div>
+                <div class="admin-modal-meta"><strong>Lan cuoi:</strong> ${client.lastSeenAt ? new Date(client.lastSeenAt).toLocaleString("vi-VN") : "-"}</div>
+            </div>
+            <div class="admin-modal-history">
+                ${historyRows.length
+                    ? historyRows.map((entry) => `
+                        <div class="admin-modal-history-item">
+                            <strong>${new Date(entry.at || Date.now()).toLocaleString("vi-VN")}</strong><br>
+                            IP: ${entry.ipAddress || "-"} • Page: ${entry.currentPage || "/"} • ${entry.blockedByFirewall ? "Bi firewall chan" : "Hop le"}
+                        </div>
+                    `).join("")
+                    : `<div class="admin-modal-history-item">Chua co lich su cho client nay.</div>`}
+            </div>
+        `;
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        deviceDetailBody.innerHTML = `<div class="simple-list-item"><span>${error.message || "Khong tai duoc chi tiet thiet bi"}</span></div>`;
+    }
+}
+
+async function saveFirewallRules() {
+    try {
+        const response = await fetch(ADMIN_FIREWALL_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                rules: adminFirewallRules
+            })
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong luu duoc firewall");
+        }
+        adminFirewallRules = Array.isArray(payload?.rules) ? payload.rules : adminFirewallRules;
+        renderFirewallRules();
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong luu duoc firewall");
+    }
+}
+
+async function handleAddFirewallRule() {
+    const rule = String(firewallRuleInput?.value || "").trim();
+    if (!rule) {
+        showStatus("Nhap rule IP truoc khi them");
+        return;
+    }
+    if (!adminFirewallRules.includes(rule)) {
+        adminFirewallRules = [...adminFirewallRules, rule];
+    }
+    if (firewallRuleInput) {
+        firewallRuleInput.value = "";
+    }
+    await saveFirewallRules();
+    showStatus("Da them firewall rule");
+}
+
+async function handleDeleteFirewallRule(index) {
+    const rowIndex = Number(index);
+    if (Number.isNaN(rowIndex) || rowIndex < 0 || rowIndex >= adminFirewallRules.length) {
+        return;
+    }
+    adminFirewallRules = adminFirewallRules.filter((_, itemIndex) => itemIndex !== rowIndex);
+    await saveFirewallRules();
+    showStatus("Da xoa firewall rule");
+}
+
+async function handleAckAlert(alertId) {
+    try {
+        const response = await fetch(ADMIN_ALERTS_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                action: "ack",
+                alertId
+            })
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong cap nhat duoc canh bao");
+        }
+        adminAlerts = Array.isArray(payload?.alerts) ? payload.alerts : adminAlerts;
+        renderAlerts();
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong cap nhat duoc canh bao");
+    }
+}
+
+async function handleAckAllAlerts() {
+    try {
+        const response = await fetch(ADMIN_ALERTS_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                action: "ack_all"
+            })
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong cap nhat duoc canh bao");
+        }
+        adminAlerts = Array.isArray(payload?.alerts) ? payload.alerts : adminAlerts;
+        renderAlerts();
+        showStatus("Da danh dau doc tat ca canh bao");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong cap nhat duoc canh bao");
+    }
+}
+
+async function handleSaveOtpSettings() {
+    if (!isSuperAdmin()) {
+        showStatus("Chi Super Admin duoc sua OTP");
+        return;
+    }
+    try {
+        const response = await fetch(ADMIN_AUTH_OTP_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                otpEnabled: otpEnabledInput?.value === "1",
+                otpCode: String(otpCodeInput?.value || "").trim()
+            })
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong luu duoc OTP");
+        }
+        if (otpEnabledInput) {
+            otpEnabledInput.value = payload?.otpEnabled ? "1" : "0";
+        }
+        if (otpCodeInput) {
+            otpCodeInput.value = String(payload?.otpCode || "");
+        }
+        showStatus("Da cap nhat OTP");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong luu duoc OTP");
+    }
+}
+
+async function handleSaveRoleUser() {
+    if (!isSuperAdmin()) {
+        showStatus("Chi Super Admin duoc sua role user");
+        return;
+    }
+    const username = String(roleUsernameInput?.value || "").trim().toLowerCase();
+    if (!username) {
+        showStatus("Nhap username role user");
+        return;
+    }
+    try {
+        const response = await fetch(ADMIN_AUTH_USERS_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                action: "upsert",
+                username,
+                role: roleLevelInput?.value || "mod",
+                password: String(rolePasswordInput?.value || "").trim()
+            })
+        });
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong luu duoc role user");
+        }
+        adminRoleUsers = Array.isArray(payload?.users) ? payload.users : adminRoleUsers;
+        renderRoleUsersTable();
+        if (roleUsernameInput) {
+            roleUsernameInput.value = "";
+        }
+        if (rolePasswordInput) {
+            rolePasswordInput.value = "";
+        }
+        showStatus("Da cap nhat role user");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong luu duoc role user");
+    }
+}
+
+async function handleDeleteRoleUser(username) {
+    if (!isSuperAdmin()) {
+        showStatus("Chi Super Admin duoc xoa role user");
+        return;
+    }
+    try {
+        const response = await fetch(ADMIN_AUTH_USERS_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                action: "delete",
+                username
+            })
+        });
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong xoa duoc role user");
+        }
+        adminRoleUsers = Array.isArray(payload?.users) ? payload.users : adminRoleUsers;
+        renderRoleUsersTable();
+        showStatus("Da xoa role user");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong xoa duoc role user");
+    }
+}
+
 async function loadAdminDashboard() {
     await fetchAdminDataFromServer();
     try {
         await fetchClientRows();
+        await Promise.all([
+            fetchOtpSettings(),
+            fetchRoleUsers(),
+            fetchAuditLogs(),
+            fetchAlerts(),
+            fetchFirewallRules(),
+            fetchDashboardStats()
+        ]);
     } catch (error) {
         if (error.message === "admin_auth_required") {
             storeAdminToken("");
@@ -1030,6 +1853,13 @@ function startAdminLiveSync() {
         try {
             await fetchAdminDataFromServer();
             await fetchClientRows();
+            await Promise.all([
+                fetchAuditLogs(),
+                fetchAlerts(),
+                fetchFirewallRules(),
+                fetchDashboardStats(),
+                fetchRoleUsers()
+            ]);
             renderAll();
         } catch (error) {
             if (error.message === "admin_auth_required") {
@@ -1106,13 +1936,87 @@ addGameButton.addEventListener("click", handleAddGame);
 addUserButton.addEventListener("click", handleAddUser);
 adminLoginForm?.addEventListener("submit", handleAdminLogin);
 changePasswordButton?.addEventListener("click", handleChangePassword);
+saveOtpButton?.addEventListener("click", handleSaveOtpSettings);
+saveRoleUserButton?.addEventListener("click", handleSaveRoleUser);
+refreshAuditButton?.addEventListener("click", fetchAuditLogs);
+refreshAlertsButton?.addEventListener("click", fetchAlerts);
+ackAllAlertsButton?.addEventListener("click", handleAckAllAlerts);
+addFirewallRuleButton?.addEventListener("click", handleAddFirewallRule);
+dedupeClientsButton?.addEventListener("click", handleDedupeClients);
+exportClientsCsvButton?.addEventListener("click", handleExportClientsCsv);
+clientFilterOnline?.addEventListener("change", () => {
+    clientFilters.online = clientFilterOnline.value || "all";
+    renderClientsTable();
+});
+clientFilterDevice?.addEventListener("change", () => {
+    clientFilters.device = clientFilterDevice.value || "all";
+    renderClientsTable();
+});
+clientFilterIp?.addEventListener("input", () => {
+    clientFilters.ip = clientFilterIp.value.trim();
+    renderClientsTable();
+});
+clientFilterUser?.addEventListener("input", () => {
+    clientFilters.user = clientFilterUser.value.trim();
+    renderClientsTable();
+});
+clientFilterResetButton?.addEventListener("click", () => {
+    clientFilters.online = "all";
+    clientFilters.device = "all";
+    clientFilters.ip = "";
+    clientFilters.user = "";
+    if (clientFilterOnline) {
+        clientFilterOnline.value = "all";
+    }
+    if (clientFilterDevice) {
+        clientFilterDevice.value = "all";
+    }
+    if (clientFilterIp) {
+        clientFilterIp.value = "";
+    }
+    if (clientFilterUser) {
+        clientFilterUser.value = "";
+    }
+    renderClientsTable();
+});
 clientsTableBody?.addEventListener("click", (event) => {
     const toggleButton = event.target.closest('[data-action="toggle-client-block"]');
-    if (!toggleButton) {
+    if (toggleButton) {
+        handleToggleClientBlock(toggleButton.dataset.clientId);
         return;
     }
 
-    handleToggleClientBlock(toggleButton.dataset.clientId);
+    const detailRow = event.target.closest('[data-action="open-client-detail"]');
+    if (detailRow) {
+        openClientDetail(detailRow.dataset.clientId, detailRow.dataset.clientFingerprint);
+    }
+});
+roleUsersTableBody?.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest('[data-action="delete-role-user"]');
+    if (!deleteButton) {
+        return;
+    }
+    handleDeleteRoleUser(String(deleteButton.dataset.username || ""));
+});
+firewallRulesList?.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest('[data-action="delete-firewall-rule"]');
+    if (!deleteButton) {
+        return;
+    }
+    handleDeleteFirewallRule(deleteButton.dataset.index);
+});
+alertsList?.addEventListener("click", (event) => {
+    const ackButton = event.target.closest('[data-action="ack-alert"]');
+    if (!ackButton) {
+        return;
+    }
+    handleAckAlert(String(ackButton.dataset.alertId || ""));
+});
+closeDeviceDetailButton?.addEventListener("click", closeDeviceDetailModal);
+deviceDetailModal?.addEventListener("click", (event) => {
+    if (event.target === deviceDetailModal) {
+        closeDeviceDetailModal();
+    }
 });
 
 window.addEventListener("storage", (event) => {
@@ -1130,6 +2034,9 @@ window.addEventListener("storage", (event) => {
 
 async function bootstrapAdmin() {
     renderAdminSections();
+    if (adminUsernameInput && !adminUsernameInput.value) {
+        adminUsernameInput.value = "admin";
+    }
     const hasValidSession = await verifyAdminSession();
     if (!hasValidSession) {
         setAdminLockedState("Neu vua cap nhat code ma van khong vao duoc, hay tat server cu va chay lai run.bat.");
@@ -1139,6 +2046,7 @@ async function bootstrapAdmin() {
     setAdminUnlockedState();
     await loadAdminDashboard();
     startAdminLiveSync();
+    applyRolePermissions();
 }
 
 bootstrapAdmin();
