@@ -207,8 +207,21 @@ function buildClientFingerprint(client) {
     const limoreName = String(client?.limoreName || "").trim().toLowerCase();
     const userIdentity = currentUserId || desktopName || limoreName || "-";
     const isMobile = client?.isMobile ? "mobile" : "desktop";
-    const userAgent = normalizeUserAgentSignature(client?.userAgent || "");
-    return [ipAddress, deviceType, isMobile, userIdentity, userAgent].join("|");
+    const userAgent = String(client?.userAgent || "").toLowerCase();
+    const deviceFamily = /iphone/.test(userAgent)
+        ? "iphone"
+        : /ipad/.test(userAgent)
+            ? "ipad"
+            : /android/.test(userAgent)
+                ? "android"
+                : /windows/.test(userAgent)
+                    ? "windows"
+                    : /macintosh|mac os/.test(userAgent)
+                        ? "mac"
+                        : /linux/.test(userAgent)
+                            ? "linux"
+                            : deviceType;
+    return [ipAddress || "-", deviceFamily, isMobile, userIdentity].join("|");
 }
 
 function mergeClientRows(clients) {

@@ -764,6 +764,10 @@
             return;
         }
         desktop.addEventListener("pointerdown", (event) => {
+            if (document.body.classList.contains("mobile-fit")) {
+                desktopSelectionBoxEl.hidden = true;
+                return;
+            }
             if (event.pointerType && event.pointerType !== "mouse") {
                 desktopSelectionBoxEl.hidden = true;
                 return;
@@ -803,10 +807,12 @@
                 desktopSelectionBoxEl.hidden = true;
                 document.removeEventListener("pointermove", onMove);
                 document.removeEventListener("pointerup", onUp);
+                document.removeEventListener("pointercancel", onUp);
             };
 
             document.addEventListener("pointermove", onMove);
             document.addEventListener("pointerup", onUp);
+            document.addEventListener("pointercancel", onUp);
         });
     }
 
@@ -851,7 +857,7 @@
     function setupPreviewTooltips() {
         let previewCloseTimer = 0;
 
-        const schedulePreviewClose = (delayMs = 260) => {
+        const schedulePreviewClose = (delayMs = 420) => {
             if (!taskbarPreviewEl) {
                 return;
             }
@@ -901,7 +907,7 @@
             const targetLeft = rect.left + rect.width / 2 - previewWidth / 2;
             const clampedLeft = Math.max(10, Math.min(targetLeft, viewportWidth - previewWidth - 10));
             taskbarPreviewEl.style.left = `${clampedLeft}px`;
-            taskbarPreviewEl.style.bottom = "50px";
+            taskbarPreviewEl.style.bottom = "40px";
             taskbarPreviewEl.classList.add("open");
             taskbarPreviewEl.querySelectorAll("[data-preview-focus]").forEach((previewButton) => {
                 previewButton.onclick = () => focusApp(previewButton.dataset.previewFocus || "");
@@ -918,7 +924,7 @@
         });
 
         taskbarPreviewEl?.addEventListener("mouseenter", keepPreviewOpen);
-        taskbarPreviewEl?.addEventListener("mouseleave", () => schedulePreviewClose(180));
+        taskbarPreviewEl?.addEventListener("mouseleave", () => schedulePreviewClose(300));
     }
 
     const originalBuildWindow = buildWindow;

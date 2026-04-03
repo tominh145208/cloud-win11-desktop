@@ -1,4 +1,4 @@
-const LIMORE_ADMIN_DATA_KEY = "win11_limore_admin_data_v1";
+﻿const LIMORE_ADMIN_DATA_KEY = "win11_limore_admin_data_v1";
 const STEAM_ASSET_BASE_URL = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps";
 const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
 const LIMORE_CLIENTS_API = "/api/limore-clients";
@@ -441,7 +441,7 @@ function renderClientsTable() {
     if (!mergedClientRows.length) {
         clientsTableBody.innerHTML = `
             <tr>
-                <td colspan="9">Chua co client nao ket noi vao server.</td>
+                <td colspan="6">Chua co client nao ket noi vao server.</td>
             </tr>
         `;
         return;
@@ -459,16 +459,33 @@ function renderClientsTable() {
                 ? new Date(client.lastSeenAt).toLocaleString("vi-VN")
                 : "-";
             const identityStatus = client.anonymous ? "An danh" : "Da nhan dien";
-            const deviceLabel = client.isMobile ? `${client.deviceType} mobile` : client.deviceType;
+            const deviceTitle = getClientDeviceTitle(client);
+            const deviceMeta = getClientDeviceMeta(client);
+            const desktopName = client.desktopName || "-";
+            const limoreName = client.limoreName || "Anonymous";
+            const userDisplay = desktopName !== "-" ? desktopName : (client.currentUserId || "Chua co user");
+            const pageDisplay = client.currentPage || "/";
+            const ipDisplay = client.ipAddress || "-";
             return `
                 <tr>
-                    <td>${deviceLabel || "unknown"}</td>
-                    <td>${client.desktopName || "-"}</td>
-                    <td>${client.limoreName || "-"}</td>
-                    <td>${client.currentPage || "-"}</td>
-                    <td>${client.userAgent ? client.userAgent.slice(0, 42) : "-"}</td>
-                    <td><span class="status-pill ${isOnline ? "is-online" : "is-offline"}">${isOnline ? "Online" : "Offline"}</span></td>
-                    <td><span class="status-pill ${isBlocked ? "is-blocked" : ""}">${isBlocked ? "Bi ngat" : identityStatus}</span></td>
+                    <td>
+                        <div class="client-primary">${deviceTitle}</div>
+                        <div class="client-secondary">${deviceMeta}</div>
+                    </td>
+                    <td>
+                        <div class="client-primary">${userDisplay}</div>
+                        <div class="client-secondary">Limore: ${limoreName}</div>
+                    </td>
+                    <td>
+                        <div class="client-primary">${ipDisplay}</div>
+                        <div class="client-secondary">Trang: ${pageDisplay}</div>
+                    </td>
+                    <td>
+                        <div class="client-status-stack">
+                            <span class="status-pill ${isOnline ? "is-online" : "is-offline"}">${isOnline ? "Online" : "Offline"}</span>
+                            <span class="status-pill ${isBlocked ? "is-blocked" : ""}">${isBlocked ? "Bi ngat" : identityStatus}</span>
+                        </div>
+                    </td>
                     <td>${lastSeen}</td>
                     <td>
                         <button
@@ -483,6 +500,68 @@ function renderClientsTable() {
                 </tr>
             `;
         }).join("");
+}
+
+function getClientDeviceTitle(client) {
+    const normalizedUa = String(client?.userAgent || "");
+    const deviceType = String(client?.deviceType || "unknown").trim().toLowerCase();
+
+    if (/iphone/i.test(normalizedUa)) {
+        return "iPhone";
+    }
+    if (/ipad/i.test(normalizedUa)) {
+        return "iPad";
+    }
+    if (/android/i.test(normalizedUa)) {
+        return deviceType === "tablet" ? "Android Tablet" : "Android Phone";
+    }
+    if (/windows/i.test(normalizedUa)) {
+        return "Windows Desktop";
+    }
+    if (/macintosh|mac os/i.test(normalizedUa)) {
+        return "Mac";
+    }
+    if (/linux/i.test(normalizedUa) && !/android/i.test(normalizedUa)) {
+        return "Linux Desktop";
+    }
+    if (deviceType === "desktop") {
+        return "Desktop";
+    }
+    if (deviceType === "tablet") {
+        return "Tablet";
+    }
+    return client?.isMobile ? "Mobile Device" : "Unknown Device";
+}
+
+function getClientDeviceMeta(client) {
+    const userAgent = String(client?.userAgent || "");
+    const matches = [];
+
+    const iosMatch = userAgent.match(/OS\s([\d_]+)/i);
+    if (iosMatch) {
+        matches.push(`iOS ${iosMatch[1].replace(/_/g, ".")}`);
+    }
+
+    const androidMatch = userAgent.match(/Android\s([\d.]+)/i);
+    if (androidMatch) {
+        matches.push(`Android ${androidMatch[1]}`);
+    }
+
+    const windowsMatch = userAgent.match(/Windows NT\s([\d.]+)/i);
+    if (windowsMatch) {
+        matches.push(`Windows ${windowsMatch[1]}`);
+    }
+
+    const macMatch = userAgent.match(/Mac OS X\s([\d_]+)/i);
+    if (macMatch) {
+        matches.push(`macOS ${macMatch[1].replace(/_/g, ".")}`);
+    }
+
+    if (!matches.length) {
+        matches.push(String(client?.deviceType || "unknown"));
+    }
+
+    return matches.join(" | ");
 }
 
 function normalizeClientUserAgent(userAgent) {
@@ -502,9 +581,23 @@ function buildClientFingerprint(client) {
     const currentUserId = String(client?.currentUserId || "").trim().toLowerCase();
     const desktopName = String(client?.desktopName || "").trim().toLowerCase();
     const limoreName = String(client?.limoreName || "").trim().toLowerCase();
+    const userAgent = String(client?.userAgent || "").toLowerCase();
+    const deviceFamily = /iphone/.test(userAgent)
+        ? "iphone"
+        : /ipad/.test(userAgent)
+            ? "ipad"
+            : /android/.test(userAgent)
+                ? "android"
+                : /windows/.test(userAgent)
+                    ? "windows"
+                    : /macintosh|mac os/.test(userAgent)
+                        ? "mac"
+                        : /linux/.test(userAgent)
+                            ? "linux"
+                            : deviceType;
     const identity = currentUserId || desktopName || limoreName || "-";
     const isMobile = client?.isMobile ? "mobile" : "desktop";
-    return [ipAddress, deviceType, isMobile, identity, normalizeClientUserAgent(client?.userAgent || "")].join("|");
+    return [ipAddress || "-", deviceFamily, isMobile, identity].join("|");
 }
 
 function mergeClientRows(clients) {
@@ -1000,3 +1093,4 @@ async function bootstrapAdmin() {
 }
 
 bootstrapAdmin();
+

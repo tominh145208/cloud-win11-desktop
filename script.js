@@ -101,7 +101,9 @@ const mobileFitState = {
     offsetY: 0,
     width: window.innerWidth,
     height: window.innerHeight,
-    windowScale: 1
+    windowScale: 1,
+    lastViewportWidth: window.innerWidth,
+    lastViewportHeight: window.innerHeight
 };
 
 let screenWakeLock = null;
@@ -1056,6 +1058,8 @@ function applyMobileUiFit() {
         mobileFitState.width = window.innerWidth;
         mobileFitState.height = window.innerHeight;
         mobileFitState.windowScale = 1;
+        mobileFitState.lastViewportWidth = viewportWidth;
+        mobileFitState.lastViewportHeight = viewportHeight;
 
         document.body.classList.remove("mobile-fit");
         delete document.body.dataset.mobileDevice;
@@ -1069,8 +1073,23 @@ function applyMobileUiFit() {
         return;
     }
 
+    const nextOrientation = viewportHeight >= viewportWidth ? "portrait" : "landscape";
+    const previousOrientation = document.body.dataset.mobileOrientation || "";
+    const widthDelta = Math.abs(viewportWidth - (mobileFitState.lastViewportWidth || viewportWidth));
+    const heightDelta = Math.abs(viewportHeight - (mobileFitState.lastViewportHeight || viewportHeight));
+    const isViewportChromeJitter = mobileFitState.active
+        && previousOrientation === nextOrientation
+        && widthDelta <= 4
+        && heightDelta <= 140;
+
+    if (isViewportChromeJitter) {
+        mobileFitState.lastViewportWidth = viewportWidth;
+        mobileFitState.lastViewportHeight = viewportHeight;
+        return;
+    }
+
     const deviceClass = detectMobileDeviceClass();
-    const isPortrait = viewportHeight >= viewportWidth;
+    const isPortrait = nextOrientation === "portrait";
     let baseWidth = MOBILE_FIT_BASE_WIDTH;
     if (isPortrait) {
         baseWidth = viewportWidth <= 420 ? 1120 : viewportWidth <= 520 ? 1240 : 1366;
@@ -1092,6 +1111,8 @@ function applyMobileUiFit() {
     mobileFitState.width = baseWidth;
     mobileFitState.height = baseHeight;
     mobileFitState.windowScale = windowScale;
+    mobileFitState.lastViewportWidth = viewportWidth;
+    mobileFitState.lastViewportHeight = viewportHeight;
 
     document.body.classList.add("mobile-fit");
     document.body.dataset.mobileDevice = deviceClass;
