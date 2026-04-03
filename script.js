@@ -270,6 +270,7 @@ const LIMORE_ADMIN_DATA_KEY = "win11_limore_admin_data_v1";
 const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
 const LIMORE_CLIENTS_API = "/api/limore-clients";
 const LIMORE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
+const DESKTOP_CURRENT_USER_KEY = "win11_current_user_id_v1";
 let blockedClientIds = [];
 
 function buildSteamHeaderImage(appId) {
@@ -324,17 +325,63 @@ function sanitizeDesktopUsers(users) {
     return safeUsers.length ? safeUsers : cloneJson(defaultDesktopUsers);
 }
 
+function getPendingDesktopUser() {
+    return {
+        id: "",
+        desktopName: "",
+        limoreName: "Anonymous",
+        balance: 0,
+        activePackageId: ""
+    };
+}
+
+function getStoredDesktopUserId() {
+    try {
+        return String(localStorage.getItem(DESKTOP_CURRENT_USER_KEY) || "").trim();
+    } catch (error) {
+        return "";
+    }
+}
+
+function storeDesktopUserId(userId) {
+    try {
+        if (!userId) {
+            localStorage.removeItem(DESKTOP_CURRENT_USER_KEY);
+            return;
+        }
+        localStorage.setItem(DESKTOP_CURRENT_USER_KEY, String(userId));
+    } catch (error) {
+        // Ignore storage failures.
+    }
+}
+
+function buildDesktopUserId(desktopName) {
+    const baseSlug = String(desktopName || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 24) || "user";
+    return `${baseSlug}-${getOrCreateClientId().slice(-6)}`;
+}
+
 function getCurrentDesktopUser() {
+    if (!initialSetupComplete) {
+        return getPendingDesktopUser();
+    }
+
     return desktopUsers.find((user) => user.id === currentDesktopUserId) || desktopUsers[0] || cloneJson(defaultDesktopUsers[0]);
 }
 
 function syncDesktopUserUi() {
     const currentUser = getCurrentDesktopUser();
+    const displayName = initialSetupComplete ? currentUser.desktopName : "New User";
     if (lockUserName) {
-        lockUserName.textContent = currentUser.desktopName;
+        lockUserName.textContent = displayName;
     }
     if (startUserName) {
-        startUserName.textContent = currentUser.desktopName;
+        startUserName.textContent = displayName;
     }
 }
 
@@ -570,8 +617,10 @@ function applyLimoreAdminData(data = loadLimoreAdminData()) {
     limoreCloudLibrary = normalizeLimoreCloudGames(data.games);
     limoreCloudPackages = sanitizeLimoreCloudPackages(data.packages);
     desktopUsers = sanitizeDesktopUsers(data.users);
-    currentDesktopUserId = String(data.state?.currentUserId || desktopUsers[0]?.id || defaultDesktopUsers[0].id);
-    initialSetupComplete = Boolean(data.state?.setupComplete);
+    const storedDesktopUserId = getStoredDesktopUserId();
+    const matchedDesktopUser = desktopUsers.find((user) => user.id === storedDesktopUserId);
+    currentDesktopUserId = matchedDesktopUser?.id || "";
+    initialSetupComplete = Boolean(matchedDesktopUser);
     blockedClientIds = Array.isArray(data.state?.blockedClientIds)
         ? data.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
@@ -589,11 +638,7 @@ function persistLimoreCloudState() {
         activePackageId: limoreCloudState.activePackageId
     } : user);
     persistLimoreAdminData({
-        users: nextUsers,
-        state: {
-            currentUserId: currentDesktopUserId,
-            setupComplete: initialSetupComplete
-        }
+        users: nextUsers
     });
 }
 
@@ -1231,22 +1276,29 @@ function completeInitialSetup() {
         return;
     }
 
-    const nextUsers = [{
-        id: defaultDesktopUsers[0].id,
+    const existingUsers = sanitizeDesktopUsers(loadLimoreAdminData().users);
+    const nextUserId = getStoredDesktopUserId() || buildDesktopUserId(desktopName);
+    const nextUser = {
+        id: nextUserId,
         desktopName,
         limoreName: limoreName || "Anonymous",
         balance: 0,
         activePackageId: ""
-    }];
+    };
+    const existingUserIndex = existingUsers.findIndex((user) => user.id === nextUserId);
+    const nextUsers = existingUserIndex >= 0
+        ? existingUsers.map((user) => user.id === nextUserId ? {
+            ...user,
+            desktopName: nextUser.desktopName,
+            limoreName: nextUser.limoreName
+        } : user)
+        : [...existingUsers, nextUser];
 
-    currentDesktopUserId = nextUsers[0].id;
+    currentDesktopUserId = nextUserId;
     initialSetupComplete = true;
+    storeDesktopUserId(currentDesktopUserId);
     persistLimoreAdminData({
-        users: nextUsers,
-        state: {
-            currentUserId: currentDesktopUserId,
-            setupComplete: true
-        }
+        users: nextUsers
     });
     applyLimoreAdminData();
     sendClientHeartbeat();
