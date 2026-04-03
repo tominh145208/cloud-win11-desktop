@@ -970,6 +970,26 @@ let altTabIndex = 0;
 let altTabSessionOpen = false;
 let lockScreenWallpaperIndex = 0;
 
+function pruneStaleOpenApps() {
+    let changed = false;
+    openAppMap.forEach((appState, appId) => {
+        if (appState?.windowEl?.isConnected) {
+            return;
+        }
+
+        if (appState?.runningEl?.isConnected) {
+            appState.runningEl.remove();
+        }
+
+        openAppMap.delete(appId);
+        if (activeAppId === appId) {
+            activeAppId = "";
+        }
+        changed = true;
+    });
+    return changed;
+}
+
 const CONTROLLER_LAYOUT_KEY = "win11_virtual_controller_layout_v2";
 const controllerSessionStart = Date.now();
 const controllerPressedKeys = new Set();
@@ -1682,6 +1702,7 @@ function getTaskbarAppId(appId) {
 }
 
 function getAppStatesByTaskbar(taskbarAppId) {
+    pruneStaleOpenApps();
     const states = [];
     openAppMap.forEach((appState, appId) => {
         if (getTaskbarAppId(appId) === taskbarAppId) {
@@ -1725,6 +1746,7 @@ function syncMaximizeButtons(windowEl, isMaximized) {
 }
 
 function refreshTaskbarIndicators() {
+    pruneStaleOpenApps();
     document.querySelectorAll(".taskbar-app, .running-task-icon").forEach((iconButton) => {
         const taskbarAppId = iconButton.dataset.app;
         const relatedStates = getAppStatesByTaskbar(taskbarAppId);
@@ -1741,6 +1763,19 @@ function refreshTaskbarIndicators() {
 function focusApp(appId) {
     const appState = openAppMap.get(appId);
     if (!appState) {
+        pruneStaleOpenApps();
+        return;
+    }
+
+    if (!appState.windowEl?.isConnected) {
+        if (appState.runningEl?.isConnected) {
+            appState.runningEl.remove();
+        }
+        openAppMap.delete(appId);
+        if (activeAppId === appId) {
+            activeAppId = "";
+        }
+        refreshTaskbarIndicators();
         return;
     }
 
@@ -1825,6 +1860,13 @@ function toggleMaximize(appId) {
 function minimizeApp(appId) {
     const appState = openAppMap.get(appId);
     if (!appState) {
+        pruneStaleOpenApps();
+        refreshTaskbarIndicators();
+        return;
+    }
+
+    if (!appState.windowEl?.isConnected) {
+        closeApp(appId);
         return;
     }
 
@@ -1839,11 +1881,15 @@ function minimizeApp(appId) {
 function closeApp(appId) {
     const appState = openAppMap.get(appId);
     if (!appState) {
+        pruneStaleOpenApps();
+        refreshTaskbarIndicators();
         return;
     }
 
-    appState.windowEl.remove();
-    if (appState.runningEl) {
+    if (appState.windowEl?.isConnected) {
+        appState.windowEl.remove();
+    }
+    if (appState.runningEl?.isConnected) {
         appState.runningEl.remove();
     }
 
@@ -3560,6 +3606,8 @@ function openApp(appId, options = {}) {
         return;
     }
 
+    pruneStaleOpenApps();
+
     const app = getAppInfo(appId);
     if (app.launchInApp === "chrome" && app.launchUrl) {
         openUrlInsideDesktopChrome(app.launchUrl, app.name);
@@ -3568,8 +3616,12 @@ function openApp(appId, options = {}) {
     }
 
     if (openAppMap.has(appId)) {
-        focusApp(appId);
-        return;
+        const existingState = openAppMap.get(appId);
+        if (existingState?.windowEl?.isConnected) {
+            focusApp(appId);
+            return;
+        }
+        closeApp(appId);
     }
 
     const windowEl = buildWindow(appId, options);
@@ -3614,6 +3666,7 @@ function openApp(appId, options = {}) {
 }
 
 function toggleAppFromTaskbar(appId) {
+    pruneStaleOpenApps();
     const relatedStates = getAppStatesByTaskbar(appId);
     if (relatedStates.length === 0) {
         const launchAppId = appId === "files" ? "thispc" : appId;
@@ -3624,6 +3677,14 @@ function toggleAppFromTaskbar(appId) {
     const appState = relatedStates.find((state) => state.appId === activeAppId)
         || relatedStates.find((state) => !state.windowEl.classList.contains("minimized"))
         || relatedStates[0];
+    if (!appState?.windowEl?.isConnected) {
+        if (appState?.appId) {
+            closeApp(appState.appId);
+        }
+        const launchAppId = appId === "files" ? "thispc" : appId;
+        openApp(launchAppId);
+        return;
+    }
     const isActive = activeAppId === appState.appId && !appState.windowEl.classList.contains("minimized");
     if (isActive) {
         minimizeApp(appState.appId);

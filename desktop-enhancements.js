@@ -855,6 +855,14 @@
     }
 
     function setupPreviewTooltips() {
+        const supportsHoverPreview = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+        if (!supportsHoverPreview) {
+            if (taskbarPreviewEl) {
+                taskbarPreviewEl.classList.remove("open");
+            }
+            return;
+        }
+
         let previewCloseTimer = 0;
 
         const schedulePreviewClose = (delayMs = 420) => {
