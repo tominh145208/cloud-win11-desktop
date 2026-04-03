@@ -230,12 +230,26 @@ function buildClientFingerprint(client) {
     return [ipAddress || "-", deviceFamily, isMobile, userIdentity].join("|");
 }
 
-function mergeClientRows(clients) {
-    const byClientId = new Map();
-    const byFingerprint = new Map();
+function mergeClientEntry(existingClient, incomingClient) {
+    if (!existingClient) {
+        return incomingClient;
+    }
 
-    (Array.isArray(clients) ? clients : []).forEach((client) => {
-        const normalizedClient = {
+    const existingLastSeenAt = new Date(existingClient.lastSeenAt || 0).getTime();
+    const incomingLastSeenAt = new Date(incomingClient.lastSeenAt || 0).getTime();
+    const newerClient = incomingLastSeenAt >= existingLastSeenAt ? incomingClient : existingClient;
+    const olderClient = newerClient === incomingClient ? existingClient : incomingClient;
+
+    return {
+        ...olderClient,
+        ...newerClient,
+        clientId: String(newerClient.clientId || olderClient.clientId || "").trim()
+    };
+}
+
+function mergeClientRows(clients) {
+    const normalizedClients = (Array.isArray(clients) ? clients : [])
+        .map((client) => ({
             ...client,
             clientId: String(client?.clientId || "").trim(),
             ipAddress: String(client?.ipAddress || "").trim(),
@@ -249,45 +263,31 @@ function mergeClientRows(clients) {
             isMobile: Boolean(client?.isMobile),
             anonymous: Boolean(client?.anonymous),
             lastSeenAt: String(client?.lastSeenAt || "")
-        };
+        }))
+        .filter((client) => client.clientId || client.ipAddress || client.userAgent || client.lastSeenAt)
+        .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")));
 
+    const byClientId = new Map();
+    const clientRowsWithoutId = [];
+
+    normalizedClients.forEach((normalizedClient) => {
         const clientId = normalizedClient.clientId;
-        const fingerprint = buildClientFingerprint(normalizedClient);
-        const existing =
-            (clientId && byClientId.get(clientId)) ||
-            byFingerprint.get(fingerprint);
-
-        if (existing) {
-            const existingLastSeenAt = new Date(existing.lastSeenAt || 0).getTime();
-            const incomingLastSeenAt = new Date(normalizedClient.lastSeenAt || 0).getTime();
-            const newerClient = incomingLastSeenAt >= existingLastSeenAt ? normalizedClient : existing;
-            const olderClient = newerClient === normalizedClient ? existing : normalizedClient;
-            const mergedClient = {
-                ...olderClient,
-                ...newerClient
-            };
-
-            if (!mergedClient.clientId) {
-                mergedClient.clientId = newerClient.clientId || olderClient.clientId;
-            }
-
-            if (clientId) {
-                byClientId.set(clientId, mergedClient);
-            }
-            if (mergedClient.clientId) {
-                byClientId.set(mergedClient.clientId, mergedClient);
-            }
-            byFingerprint.set(buildClientFingerprint(mergedClient), mergedClient);
+        if (clientId) {
+            const existing = byClientId.get(clientId);
+            byClientId.set(clientId, mergeClientEntry(existing, normalizedClient));
             return;
         }
-
-        if (clientId) {
-            byClientId.set(clientId, normalizedClient);
-        }
-        byFingerprint.set(fingerprint, normalizedClient);
+        clientRowsWithoutId.push(normalizedClient);
     });
 
-    return Array.from(new Set(byFingerprint.values()))
+    const byFingerprint = new Map();
+    [...byClientId.values(), ...clientRowsWithoutId].forEach((client) => {
+        const fingerprint = buildClientFingerprint(client);
+        const existing = byFingerprint.get(fingerprint);
+        byFingerprint.set(fingerprint, mergeClientEntry(existing, client));
+    });
+
+    return Array.from(byFingerprint.values())
         .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")));
 }
 
@@ -472,10 +472,11 @@ const server = http.createServer(async (req, res) => {
                     return;
                 }
                 const existing = readAdminData();
+                const payloadClients = Array.isArray(payload?.clients) ? payload.clients : [];
                 const nextData = {
                     ...existing,
                     ...payload,
-                    clients: Array.isArray(payload.clients) ? payload.clients : (existing.clients || []),
+                    clients: mergeClientRows([...(existing.clients || []), ...payloadClients]),
                     state: {
                         ...(existing.state || {}),
                         ...(payload.state || {})
@@ -501,6 +502,13 @@ const server = http.createServer(async (req, res) => {
             }
             const data = readAdminData();
             const mergedClients = mergeClientRows(data.clients);
+            const existingClients = Array.isArray(data.clients) ? data.clients : [];
+            if (JSON.stringify(existingClients) !== JSON.stringify(mergedClients)) {
+                writeAdminData({
+                    ...data,
+                    clients: mergedClients
+                });
+            }
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
             res.end(JSON.stringify({
                 ok: true,

@@ -605,17 +605,61 @@ function buildClientFingerprint(client) {
     return [ipAddress || "-", deviceFamily, isMobile, identity].join("|");
 }
 
-function mergeClientRows(clients) {
-    const mergedRows = new Map();
+function mergeClientEntry(existingClient, incomingClient) {
+    if (!existingClient) {
+        return incomingClient;
+    }
 
-    (Array.isArray(clients) ? clients : []).forEach((client) => {
+    const existingLastSeen = existingClient?.lastSeenAt ? new Date(existingClient.lastSeenAt).getTime() : 0;
+    const incomingLastSeen = incomingClient?.lastSeenAt ? new Date(incomingClient.lastSeenAt).getTime() : 0;
+    const newerClient = incomingLastSeen >= existingLastSeen ? incomingClient : existingClient;
+    const olderClient = newerClient === incomingClient ? existingClient : incomingClient;
+
+    return {
+        ...olderClient,
+        ...newerClient,
+        clientId: String(newerClient?.clientId || olderClient?.clientId || "").trim()
+    };
+}
+
+function mergeClientRows(clients) {
+    const normalizedRows = (Array.isArray(clients) ? clients : [])
+        .map((client) => ({
+            ...client,
+            clientId: String(client?.clientId || "").trim(),
+            ipAddress: String(client?.ipAddress || "").trim(),
+            deviceType: String(client?.deviceType || "unknown").trim() || "unknown",
+            userAgent: String(client?.userAgent || ""),
+            currentPage: String(client?.currentPage || ""),
+            desktopName: String(client?.desktopName || ""),
+            limoreName: String(client?.limoreName || ""),
+            currentUserId: String(client?.currentUserId || ""),
+            setupComplete: Boolean(client?.setupComplete),
+            isMobile: Boolean(client?.isMobile),
+            anonymous: Boolean(client?.anonymous),
+            lastSeenAt: String(client?.lastSeenAt || "")
+        }))
+        .filter((client) => client.clientId || client.ipAddress || client.userAgent || client.lastSeenAt)
+        .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")));
+
+    const byClientId = new Map();
+    const rowsWithoutClientId = [];
+
+    normalizedRows.forEach((client) => {
+        const clientId = String(client?.clientId || "").trim();
+        if (clientId) {
+            const existingByClientId = byClientId.get(clientId);
+            byClientId.set(clientId, mergeClientEntry(existingByClientId, client));
+            return;
+        }
+        rowsWithoutClientId.push(client);
+    });
+
+    const mergedRows = new Map();
+    [...byClientId.values(), ...rowsWithoutClientId].forEach((client) => {
         const fingerprint = buildClientFingerprint(client);
         const existingClient = mergedRows.get(fingerprint);
-        const existingLastSeen = existingClient?.lastSeenAt ? new Date(existingClient.lastSeenAt).getTime() : 0;
-        const currentLastSeen = client?.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
-        if (!existingClient || currentLastSeen >= existingLastSeen) {
-            mergedRows.set(fingerprint, client);
-        }
+        mergedRows.set(fingerprint, mergeClientEntry(existingClient, client));
     });
 
     return Array.from(mergedRows.values());
