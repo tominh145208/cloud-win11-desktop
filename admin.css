@@ -8,9 +8,9 @@
 body {
     min-height: 100vh;
     background:
-        radial-gradient(circle at top center, rgba(113, 174, 255, 0.16), transparent 26%),
-        linear-gradient(180deg, #09101a, #0f1624 34%, #121a29 100%);
-    color: #eff5ff;
+        radial-gradient(circle at top right, rgba(122, 132, 153, 0.12), transparent 22%),
+        linear-gradient(180deg, #0b0d12 0%, #11141b 42%, #171b24 100%);
+    color: #eff3fb;
 }
 
 .admin-auth-screen {
@@ -39,16 +39,122 @@ body {
 }
 
 .admin-shell {
-    width: min(1240px, calc(100% - 32px));
+    width: min(1400px, calc(100% - 32px));
     margin: 0 auto;
     padding: 32px 0 40px;
+}
+
+.admin-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.admin-sidebar {
+    position: sticky;
+    top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: calc(100vh - 50px);
+    padding: 22px 18px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 28px;
+    background:
+        linear-gradient(180deg, rgba(24, 28, 39, 0.94), rgba(13, 16, 23, 0.96)),
+        rgba(10, 12, 18, 0.94);
+    box-shadow: 0 26px 48px rgba(0, 0, 0, 0.28);
+}
+
+.admin-sidebar-brand {
+    display: grid;
+    gap: 8px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-sidebar-brand strong {
+    font-size: 24px;
+}
+
+.admin-sidebar-brand span {
+    color: rgba(222, 230, 243, 0.62);
+    line-height: 1.6;
+    font-size: 13px;
+}
+
+.admin-sidebar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-sidebar-label {
+    padding: 0 8px;
+    color: rgba(211, 219, 232, 0.52);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.admin-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(236, 241, 250, 0.84);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.admin-nav-btn i {
+    width: 16px;
+    text-align: center;
+    color: #98b5d5;
+}
+
+.admin-nav-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(134, 162, 201, 0.22);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-nav-btn.active {
+    border-color: rgba(110, 171, 255, 0.28);
+    background: linear-gradient(180deg, rgba(58, 78, 112, 0.76), rgba(34, 43, 59, 0.92));
+    color: #ffffff;
+}
+
+.admin-nav-btn.active i {
+    color: #8ad0ff;
+}
+
+.admin-sidebar-footer {
+    margin-top: auto;
+    display: grid;
+    gap: 10px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-content {
+    min-width: 0;
 }
 
 .admin-hero,
 .admin-panel,
 .overview-card {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(10, 18, 31, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(22, 25, 34, 0.95), rgba(15, 18, 26, 0.95));
     box-shadow: 0 22px 44px rgba(0, 0, 0, 0.24);
     backdrop-filter: blur(20px);
 }
@@ -62,8 +168,22 @@ body {
     border-radius: 28px;
 }
 
+.admin-live-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #5bde8f;
+    box-shadow: 0 0 18px rgba(91, 222, 143, 0.4);
+}
+
+.admin-live-copy {
+    color: rgba(232, 239, 249, 0.72);
+    font-size: 13px;
+    font-weight: 600;
+}
+
 .admin-kicker {
-    color: #7fd0ff;
+    color: #8abef9;
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -77,7 +197,7 @@ body {
 }
 
 .admin-copy {
-    max-width: 640px;
+    max-width: 720px;
     margin-top: 10px;
     color: rgba(232, 240, 252, 0.76);
     line-height: 1.6;
@@ -85,7 +205,56 @@ body {
 
 .admin-actions {
     display: flex;
-    gap: 12px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-section {
+    display: none;
+    margin-top: 18px;
+}
+
+.admin-section.active {
+    display: block;
+}
+
+.admin-section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.admin-section-head h2 {
+    font-size: 28px;
+}
+
+.admin-section-head p {
+    color: rgba(226, 234, 246, 0.64);
+}
+
+.admin-mini-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.admin-mini-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 9px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(227, 235, 246, 0.72);
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .admin-btn {
@@ -120,7 +289,6 @@ body {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
-    margin-top: 18px;
 }
 
 .overview-card {
@@ -281,6 +449,7 @@ body {
     overflow-x: auto;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 18px;
+    background: rgba(9, 12, 18, 0.44);
 }
 
 .games-table {
@@ -337,6 +506,10 @@ body {
 
 .games-table td:last-child {
     width: 70px;
+}
+
+.games-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .table-delete-btn {
@@ -410,6 +583,15 @@ body {
 }
 
 @media (max-width: 1080px) {
+    .admin-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-sidebar {
+        position: static;
+        min-height: 0;
+    }
+
     .admin-grid,
     .package-admin-grid,
     .admin-overview {
@@ -435,7 +617,17 @@ body {
         padding-top: 20px;
     }
 
+    .admin-sidebar {
+        padding: 18px 14px;
+        border-radius: 22px;
+    }
+
     .admin-hero {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-section-head {
         flex-direction: column;
         align-items: stretch;
     }

@@ -24,35 +24,90 @@
     </div>
 
     <main id="admin-shell" class="admin-shell" hidden>
-        <section class="admin-hero">
-            <div>
-                <p class="admin-kicker">Limore Cloud</p>
-                <h1>Trang quan ly</h1>
-                <p class="admin-copy">Sua game, goi cloud, user desktop va theo doi thiet bi/mobile dang vao. Du lieu duoc dong bo qua server chung.</p>
-            </div>
-            <div class="admin-actions">
-                <button id="save-all-button" type="button" class="admin-btn is-primary">Luu tat ca</button>
-                <button id="reset-defaults-button" type="button" class="admin-btn">Khoi phuc mac dinh</button>
-            </div>
-        </section>
+        <div class="admin-layout">
+            <aside class="admin-sidebar">
+                <div class="admin-sidebar-brand">
+                    <p class="admin-kicker">Limore Cloud</p>
+                    <strong>Admin Panel</strong>
+                    <span>Giao dien quan ly den xam, gon va de theo doi.</span>
+                </div>
 
-        <section class="admin-overview">
-            <article class="overview-card">
-                <span>So du</span>
-                <strong id="overview-balance">0d</strong>
-            </article>
-            <article class="overview-card">
-                <span>Goi dang dung</span>
-                <strong id="overview-package">Chua co</strong>
-            </article>
-            <article class="overview-card">
-                <span>Tong game</span>
-                <strong id="overview-games">0</strong>
-            </article>
-        </section>
+                <div class="admin-sidebar-group">
+                    <span class="admin-sidebar-label">Tong quan</span>
+                    <button type="button" class="admin-nav-btn active" data-admin-section-target="overview">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Tong quan</span>
+                    </button>
+                    <button type="button" class="admin-nav-btn" data-admin-section-target="manage">
+                        <i class="fas fa-sliders"></i>
+                        <span>Quan ly</span>
+                    </button>
+                    <button type="button" class="admin-nav-btn" data-admin-section-target="clients">
+                        <i class="fas fa-mobile-screen-button"></i>
+                        <span>Thiet bi</span>
+                    </button>
+                    <button type="button" class="admin-nav-btn" data-admin-section-target="packages">
+                        <i class="fas fa-cloud"></i>
+                        <span>Goi Cloud</span>
+                    </button>
+                    <button type="button" class="admin-nav-btn" data-admin-section-target="games">
+                        <i class="fas fa-gamepad"></i>
+                        <span>Thu vien game</span>
+                    </button>
+                </div>
 
-        <section class="admin-grid">
-            <article class="admin-panel">
+                <div class="admin-sidebar-footer">
+                    <button id="save-all-button" type="button" class="admin-btn is-primary">Luu tat ca</button>
+                    <button id="reset-defaults-button" type="button" class="admin-btn">Khoi phuc mac dinh</button>
+                </div>
+            </aside>
+
+            <div class="admin-content">
+                <section class="admin-hero">
+                    <div>
+                        <p class="admin-kicker">Limore Cloud</p>
+                        <h1>Trang quan ly</h1>
+                        <p class="admin-copy">Sidebar trai de chuyen nhanh tung khu vuc. Moi menu chi hien thi dung nhom thong tin can sua de trang admin gon, sach va de nhin hon.</p>
+                    </div>
+                    <div class="admin-actions">
+                        <span class="admin-live-dot"></span>
+                        <span class="admin-live-copy">Server chung / Railway</span>
+                    </div>
+                </section>
+
+                <section class="admin-section active" data-admin-section="overview">
+                    <div class="admin-section-head">
+                        <h2>Tong quan</h2>
+                        <p>Xem nhanh so du, goi dang dung va tong so game.</p>
+                    </div>
+                    <section class="admin-overview">
+                        <article class="overview-card">
+                            <span>So du</span>
+                            <strong id="overview-balance">0d</strong>
+                        </article>
+                        <article class="overview-card">
+                            <span>Goi dang dung</span>
+                            <strong id="overview-package">Chua co</strong>
+                        </article>
+                        <article class="overview-card">
+                            <span>Tong game</span>
+                            <strong id="overview-games">0</strong>
+                        </article>
+                    </section>
+                </section>
+
+                <section class="admin-section" data-admin-section="manage">
+                    <div class="admin-section-head">
+                        <h2>Quan ly</h2>
+                        <p>Cac muc quan ly chinh cho user desktop, bao mat va danh sach user.</p>
+                    </div>
+                    <div class="admin-mini-nav">
+                        <span class="admin-mini-chip">User hien tai</span>
+                        <span class="admin-mini-chip">Bao mat admin</span>
+                        <span class="admin-mini-chip">Danh sach user</span>
+                    </div>
+                    <section class="admin-grid">
+                        <article class="admin-panel">
                 <div class="panel-head">
                     <h2>Nguoi dung desktop</h2>
                     <p>Quan ly user dang dung tren desktop va Limore Cloud.</p>
@@ -79,9 +134,9 @@
                         <select id="active-package-input"></select>
                     </label>
                 </div>
-            </article>
+                        </article>
 
-            <article class="admin-panel">
+                        <article class="admin-panel">
                 <div class="panel-head">
                     <h2>Bao mat admin</h2>
                     <p>Khoa admin bang mat khau va doi mat khau ngay trong trang nay.</p>
@@ -106,10 +161,10 @@
                     <p>2. Bam <strong>Luu tat ca</strong>.</p>
                     <p>3. Quay lai desktop chinh, Limore Cloud se dong bo. Neu app dang mo, no se tu refresh lai.</p>
                 </div>
-            </article>
-        </section>
+                        </article>
+                    </section>
 
-        <section class="admin-panel">
+                    <section class="admin-panel">
             <div class="panel-head">
                 <h2>Danh sach user</h2>
                 <p>Them, xoa va chuyen user desktop dang hoat dong.</p>
@@ -147,9 +202,20 @@
                     </table>
                 </div>
             </div>
-        </section>
+                    </section>
+                </section>
 
-        <section class="admin-panel">
+                <section class="admin-section" data-admin-section="clients">
+                    <div class="admin-section-head">
+                        <h2>Thiet bi</h2>
+                        <p>Theo doi may desktop, mobile, trang thai online va ngat/mo lai client.</p>
+                    </div>
+                    <div class="admin-mini-nav">
+                        <span class="admin-mini-chip">Client ben ngoai</span>
+                        <span class="admin-mini-chip">Online / Offline</span>
+                        <span class="admin-mini-chip">Quan ly moi Wi-Fi</span>
+                    </div>
+                    <section class="admin-panel">
             <div class="panel-head">
                 <h2>Client ben ngoai / mobile</h2>
                 <p>Danh sach trinh duyet, thiet bi va user an danh dang vao he thong.</p>
@@ -174,17 +240,29 @@
                     </table>
                 </div>
             </div>
-        </section>
+                    </section>
+                </section>
 
-        <section class="admin-panel">
+                <section class="admin-section" data-admin-section="packages">
+                    <div class="admin-section-head">
+                        <h2>Goi Cloud</h2>
+                        <p>Sua gia, badge, mo ta va cau hinh goi cloud theo dang gon gang.</p>
+                    </div>
+                    <section class="admin-panel">
             <div class="panel-head">
                 <h2>Goi Cloud</h2>
                 <p>Sua ten goi, gia, mo ta va cau hinh.</p>
             </div>
             <div id="packages-form" class="package-admin-grid"></div>
-        </section>
+                    </section>
+                </section>
 
-        <section class="admin-panel">
+                <section class="admin-section" data-admin-section="games">
+                    <div class="admin-section-head">
+                        <h2>Thu vien game</h2>
+                        <p>Them, xoa va sua game trong Limore Cloud theo bang gon de thao tac nhanh.</p>
+                    </div>
+                    <section class="admin-panel">
             <div class="panel-head">
                 <h2>Thu vien game</h2>
                 <p>Them, xoa va sua danh sach game hien trong Limore Cloud.</p>
@@ -230,9 +308,12 @@
                     </table>
                 </div>
             </div>
-        </section>
+                    </section>
+                </section>
 
-        <div id="admin-status" class="admin-status" aria-live="polite"></div>
+                <div id="admin-status" class="admin-status" aria-live="polite"></div>
+            </div>
+        </div>
     </main>
 
     <script src="admin.js"></script>

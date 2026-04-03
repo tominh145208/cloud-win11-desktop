@@ -136,11 +136,14 @@ const adminCurrentPasswordInput = document.getElementById("admin-current-passwor
 const adminNewPasswordInput = document.getElementById("admin-new-password");
 const adminConfirmPasswordInput = document.getElementById("admin-confirm-password");
 const changePasswordButton = document.getElementById("change-password-button");
+const adminNavButtons = Array.from(document.querySelectorAll(".admin-nav-btn[data-admin-section-target]"));
+const adminSections = Array.from(document.querySelectorAll(".admin-section[data-admin-section]"));
 
 let adminData = loadAdminData();
 let clientRows = [];
 let adminToken = "";
 let adminLiveSyncTimer = 0;
+let activeAdminSection = "overview";
 
 function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
@@ -527,6 +530,21 @@ function renderAll() {
     renderUsersTable();
     renderClientsTable();
     renderGamesTable();
+    renderAdminSections();
+}
+
+function renderAdminSections() {
+    adminNavButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.adminSectionTarget === activeAdminSection);
+    });
+    adminSections.forEach((section) => {
+        section.classList.toggle("active", section.dataset.adminSection === activeAdminSection);
+    });
+}
+
+function setActiveAdminSection(sectionId) {
+    activeAdminSection = sectionId || "overview";
+    renderAdminSections();
 }
 
 function syncAccountForm() {
@@ -934,6 +952,12 @@ gamesTableBody.addEventListener("click", (event) => {
     renderOverview();
 });
 
+adminNavButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        setActiveAdminSection(button.dataset.adminSectionTarget || "overview");
+    });
+});
+
 saveAllButton.addEventListener("click", handleSaveAll);
 resetDefaultsButton.addEventListener("click", handleResetDefaults);
 addGameButton.addEventListener("click", handleAddGame);
@@ -963,6 +987,7 @@ window.addEventListener("storage", (event) => {
 });
 
 async function bootstrapAdmin() {
+    renderAdminSections();
     const hasValidSession = await verifyAdminSession();
     if (!hasValidSession) {
         setAdminLockedState("Neu vua cap nhat code ma van khong vao duoc, hay tat server cu va chay lai run.bat.");
