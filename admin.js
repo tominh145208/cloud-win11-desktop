@@ -256,14 +256,12 @@ async function fetchAdminDataFromServer() {
         }
         const payload = await response.json();
         adminData = mergeAdminData(payload?.data || {});
-        localStorage.setItem(LIMORE_ADMIN_DATA_KEY, JSON.stringify(adminData));
     } catch (error) {
         adminData = loadAdminData();
     }
 }
 
 async function saveAdminData() {
-    localStorage.setItem(LIMORE_ADMIN_DATA_KEY, JSON.stringify(adminData));
     const response = await fetch(LIMORE_ADMIN_DATA_API, {
         method: "POST",
         headers: getAuthHeaders(),
@@ -916,9 +914,12 @@ window.addEventListener("storage", (event) => {
         return;
     }
 
+    if (document.visibilityState !== "visible") {
+        return;
+    }
+
     adminData = loadAdminData();
     renderAll();
-    showStatus("Da dong bo du lieu moi");
 });
 
 async function bootstrapAdmin() {

@@ -2113,6 +2113,10 @@ body.mobile-fit .desktop-theme-grid {
     text-align: center;
 }
 
+.limore-empty-state[hidden] {
+    display: none !important;
+}
+
 .limore-empty-state p {
     color: rgba(221, 228, 255, 0.66);
     font-size: 13px;
@@ -2130,11 +2134,19 @@ body.mobile-fit .desktop-theme-grid {
     overflow: hidden;
 }
 
+.limore-blank-panel[hidden] {
+    display: none !important;
+}
+
 .limore-package-panel {
     display: none;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
     padding: 18px;
+}
+
+.limore-package-panel[hidden] {
+    display: none !important;
 }
 
 .limore-package-panel.is-active-panel {
@@ -2284,6 +2296,10 @@ body.mobile-fit .desktop-theme-grid {
 .limore-topup-accordion {
     display: none;
     width: 100%;
+}
+
+.limore-topup-accordion[hidden] {
+    display: none !important;
 }
 
 .limore-topup-accordion.is-active-panel {
