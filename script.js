@@ -542,15 +542,8 @@ async function fetchLimoreAdminDataFromServer() {
 }
 
 async function refreshLimoreAdminDataFromServer() {
-    const previousVisualSignature = getLimoreVisualSignature(loadLimoreAdminData());
     const nextData = await fetchLimoreAdminDataFromServer();
     applyLimoreAdminData(nextData);
-    const nextVisualSignature = getLimoreVisualSignature(nextData);
-
-    if (previousVisualSignature !== nextVisualSignature) {
-        refreshOpenLimoreCloudWindow();
-        return;
-    }
 
     const limoreState = openAppMap.get("gamecloud");
     if (limoreState) {
@@ -4947,13 +4940,20 @@ document.addEventListener("click", (event) => {
 });
 
 window.addEventListener("resize", () => {
+    const previousOrientation = document.body.dataset.mobileOrientation || "";
     applyMobileUiFit();
     if (!isTouchMouseModeEnabled()) {
         releaseTouchLeftHold();
     }
     clampVirtualControlsToViewport();
-    keepWindowsInsideViewport();
-    normalizeOpenWindowsForViewport();
+    const orientationChanged = mobileFitState.active
+        && previousOrientation
+        && previousOrientation !== (document.body.dataset.mobileOrientation || "");
+    if (!mobileFitState.active) {
+        keepWindowsInsideViewport();
+    } else if (orientationChanged) {
+        normalizeOpenWindowsForViewport();
+    }
     hideDesktopMenu();
     hideQuickSettings();
     hideNetworkInfoPanel();
@@ -4966,13 +4966,20 @@ window.addEventListener("resize", () => {
 
 if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", () => {
+        const previousOrientation = document.body.dataset.mobileOrientation || "";
         applyMobileUiFit();
         if (!isTouchMouseModeEnabled()) {
             releaseTouchLeftHold();
         }
         clampVirtualControlsToViewport();
-        keepWindowsInsideViewport();
-        normalizeOpenWindowsForViewport();
+        const orientationChanged = mobileFitState.active
+            && previousOrientation
+            && previousOrientation !== (document.body.dataset.mobileOrientation || "");
+        if (!mobileFitState.active) {
+            keepWindowsInsideViewport();
+        } else if (orientationChanged) {
+            normalizeOpenWindowsForViewport();
+        }
         hideNetworkInfoPanel();
         hideCalendarPanel();
         hideDesktopThemePanel();
@@ -5034,7 +5041,12 @@ async function bootstrapApp() {
         }
 
         applyLimoreAdminData();
-        refreshOpenLimoreCloudWindow();
+        const limoreState = openAppMap.get("gamecloud");
+        if (limoreState) {
+            refreshLimoreBalance(limoreState.windowEl);
+            refreshLimorePackages(limoreState.windowEl);
+            updateLimoreCloudWindow(limoreState.windowEl);
+        }
         sendClientHeartbeat();
     });
     window.addEventListener("focus", sendClientHeartbeat);
