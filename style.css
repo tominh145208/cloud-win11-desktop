@@ -738,14 +738,6 @@ body.mobile-fit .chrome-window {
     background: rgba(255, 255, 255, 0.14);
 }
 
-.network-info-btn {
-    width: auto;
-    min-width: 42px;
-    padding: 0 10px;
-    font-size: 11px;
-    font-weight: 700;
-}
-
 .clock {
     border: 0;
     background: transparent;
@@ -771,30 +763,6 @@ body.mobile-fit .chrome-window {
 .clock #date {
     color: rgba(241, 246, 252, 0.72);
     font-size: 11px;
-}
-
-.network-info-panel {
-    position: fixed;
-    right: 14px;
-    bottom: 58px;
-    z-index: 8200;
-    width: 320px;
-    padding: 14px;
-    border: 1px solid rgba(141, 170, 214, 0.22);
-    border-radius: 14px;
-    background: rgba(15, 20, 31, 0.95);
-    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.36);
-    color: #eaf2ff;
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(8px);
-    transition: opacity 0.18s ease, transform 0.18s ease;
-}
-
-.network-info-panel.open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
 }
 
 .calendar-panel,
@@ -1007,64 +975,6 @@ body.mobile-fit .chrome-window {
 .wallpaper-option span {
     font-size: 13px;
     font-weight: 600;
-}
-
-.network-info-header strong {
-    display: block;
-    font-size: 14px;
-}
-
-.network-info-header span {
-    display: block;
-    margin-top: 4px;
-    color: rgba(223, 233, 255, 0.68);
-    font-size: 12px;
-    line-height: 1.45;
-}
-
-.network-info-section {
-    margin-top: 12px;
-}
-
-.network-info-label {
-    margin-bottom: 6px;
-    color: #81d4ff;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-}
-
-.network-info-link,
-.network-info-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    color: #f4f8ff;
-    font-size: 12px;
-    word-break: break-all;
-}
-
-.network-info-copy {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid rgba(120, 151, 198, 0.22);
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    color: #edf4ff;
-    text-align: left;
-    cursor: pointer;
-}
-
-.network-info-copy:hover {
-    border-color: rgba(126, 208, 255, 0.36);
-    background: rgba(24, 42, 64, 0.72);
-}
-
-body.mobile-fit .network-info-panel {
-    right: 10px;
-    bottom: 56px;
-    width: 300px;
 }
 
 body.mobile-fit .calendar-panel {

@@ -3771,7 +3771,6 @@ function keepWindowsInsideViewport() {
         const height = Math.min(rect.height, bounds.height);
         const left = clamp(rect.left, bounds.left, bounds.left + bounds.width - width);
         const top = clamp(rect.top, bounds.top, bounds.top + bounds.height - height);
-
         applyRect(appState.windowEl, { left, top, width, height });
     });
 }
@@ -3793,7 +3792,6 @@ function normalizeOpenWindowsForViewport() {
         const rect = captureRect(appState.windowEl);
         const targetMaxWidth = Math.max(WINDOW_MIN_WIDTH, Math.round((bounds.width - 20) * windowScale));
         const targetMaxHeight = Math.max(WINDOW_MIN_HEIGHT, Math.round((bounds.height - 24) * windowScale));
-
         const width = Math.min(rect.width, targetMaxWidth, bounds.width);
         const height = Math.min(rect.height, targetMaxHeight, bounds.height);
         const left = clamp(rect.left, bounds.left, bounds.left + bounds.width - width);
