@@ -433,7 +433,9 @@ function renderClientsTable() {
         return;
     }
 
-    if (!clientRows.length) {
+    const mergedClientRows = mergeClientRows(clientRows);
+
+    if (!mergedClientRows.length) {
         clientsTableBody.innerHTML = `
             <tr>
                 <td colspan="9">Chua co client nao ket noi vao server.</td>
@@ -443,7 +445,7 @@ function renderClientsTable() {
     }
 
     const blockedClientIds = new Set(getBlockedClientIds());
-    clientsTableBody.innerHTML = clientRows
+    clientsTableBody.innerHTML = mergedClientRows
         .slice()
         .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")))
         .map((client) => {
@@ -478,6 +480,44 @@ function renderClientsTable() {
                 </tr>
             `;
         }).join("");
+}
+
+function normalizeClientUserAgent(userAgent) {
+    return String(userAgent || "")
+        .toLowerCase()
+        .replace(/\b(iphone os|cpu iphone os|cpu os|android|windows nt|mac os x|version)\s[\d._]+/g, "$1 x")
+        .replace(/\/[\d._-]+/g, "/x")
+        .replace(/\bmobile\/[\w._-]+/g, "mobile/x")
+        .replace(/\bbuild\/[\w._-]+/g, "build/x")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function buildClientFingerprint(client) {
+    const ipAddress = String(client?.ipAddress || "").trim().toLowerCase();
+    const deviceType = String(client?.deviceType || "unknown").trim().toLowerCase();
+    const currentUserId = String(client?.currentUserId || "").trim().toLowerCase();
+    const desktopName = String(client?.desktopName || "").trim().toLowerCase();
+    const limoreName = String(client?.limoreName || "").trim().toLowerCase();
+    const identity = currentUserId || desktopName || limoreName || "-";
+    const isMobile = client?.isMobile ? "mobile" : "desktop";
+    return [ipAddress, deviceType, isMobile, identity, normalizeClientUserAgent(client?.userAgent || "")].join("|");
+}
+
+function mergeClientRows(clients) {
+    const mergedRows = new Map();
+
+    (Array.isArray(clients) ? clients : []).forEach((client) => {
+        const fingerprint = buildClientFingerprint(client);
+        const existingClient = mergedRows.get(fingerprint);
+        const existingLastSeen = existingClient?.lastSeenAt ? new Date(existingClient.lastSeenAt).getTime() : 0;
+        const currentLastSeen = client?.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
+        if (!existingClient || currentLastSeen >= existingLastSeen) {
+            mergedRows.set(fingerprint, client);
+        }
+    });
+
+    return Array.from(mergedRows.values());
 }
 
 function renderAll() {

@@ -163,16 +163,113 @@ function getIpUserBindings(data) {
 }
 
 function getClientIp(req) {
+    const priorityHeaders = [
+        "cf-connecting-ip",
+        "fly-client-ip",
+        "x-real-ip"
+    ];
+
+    for (const headerName of priorityHeaders) {
+        const directIp = String(req.headers[headerName] || "").trim();
+        if (directIp) {
+            return directIp.replace(/^::ffff:/, "");
+        }
+    }
+
     const forwarded = String(req.headers["x-forwarded-for"] || "")
         .split(",")
         .map((part) => part.trim())
         .filter(Boolean);
     if (forwarded.length > 0) {
-        return forwarded[0];
+        return forwarded[0].replace(/^::ffff:/, "");
     }
 
     const remoteAddress = String(req.socket?.remoteAddress || req.connection?.remoteAddress || "").trim();
     return remoteAddress.replace(/^::ffff:/, "");
+}
+
+function normalizeUserAgentSignature(userAgent) {
+    return String(userAgent || "")
+        .toLowerCase()
+        .replace(/\b(iphone os|cpu iphone os|cpu os|android|windows nt|mac os x|version)\s[\d._]+/g, "$1 x")
+        .replace(/\/[\d._-]+/g, "/x")
+        .replace(/\bmobile\/[\w._-]+/g, "mobile/x")
+        .replace(/\bbuild\/[\w._-]+/g, "build/x")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function buildClientFingerprint(client) {
+    const ipAddress = String(client?.ipAddress || "").trim().toLowerCase();
+    const deviceType = String(client?.deviceType || "unknown").trim().toLowerCase();
+    const currentUserId = String(client?.currentUserId || "").trim().toLowerCase();
+    const desktopName = String(client?.desktopName || "").trim().toLowerCase();
+    const limoreName = String(client?.limoreName || "").trim().toLowerCase();
+    const userIdentity = currentUserId || desktopName || limoreName || "-";
+    const isMobile = client?.isMobile ? "mobile" : "desktop";
+    const userAgent = normalizeUserAgentSignature(client?.userAgent || "");
+    return [ipAddress, deviceType, isMobile, userIdentity, userAgent].join("|");
+}
+
+function mergeClientRows(clients) {
+    const byClientId = new Map();
+    const byFingerprint = new Map();
+
+    (Array.isArray(clients) ? clients : []).forEach((client) => {
+        const normalizedClient = {
+            ...client,
+            clientId: String(client?.clientId || "").trim(),
+            ipAddress: String(client?.ipAddress || "").trim(),
+            deviceType: String(client?.deviceType || "unknown").trim() || "unknown",
+            userAgent: String(client?.userAgent || ""),
+            currentPage: String(client?.currentPage || ""),
+            desktopName: String(client?.desktopName || ""),
+            limoreName: String(client?.limoreName || ""),
+            currentUserId: String(client?.currentUserId || ""),
+            setupComplete: Boolean(client?.setupComplete),
+            isMobile: Boolean(client?.isMobile),
+            anonymous: Boolean(client?.anonymous),
+            lastSeenAt: String(client?.lastSeenAt || "")
+        };
+
+        const clientId = normalizedClient.clientId;
+        const fingerprint = buildClientFingerprint(normalizedClient);
+        const existing =
+            (clientId && byClientId.get(clientId)) ||
+            byFingerprint.get(fingerprint);
+
+        if (existing) {
+            const existingLastSeenAt = new Date(existing.lastSeenAt || 0).getTime();
+            const incomingLastSeenAt = new Date(normalizedClient.lastSeenAt || 0).getTime();
+            const newerClient = incomingLastSeenAt >= existingLastSeenAt ? normalizedClient : existing;
+            const olderClient = newerClient === normalizedClient ? existing : normalizedClient;
+            const mergedClient = {
+                ...olderClient,
+                ...newerClient
+            };
+
+            if (!mergedClient.clientId) {
+                mergedClient.clientId = newerClient.clientId || olderClient.clientId;
+            }
+
+            if (clientId) {
+                byClientId.set(clientId, mergedClient);
+            }
+            if (mergedClient.clientId) {
+                byClientId.set(mergedClient.clientId, mergedClient);
+            }
+            byFingerprint.set(buildClientFingerprint(mergedClient), mergedClient);
+            return;
+        }
+
+        if (clientId) {
+            byClientId.set(clientId, normalizedClient);
+        }
+        byFingerprint.set(fingerprint, normalizedClient);
+    });
+
+    return Array.from(new Set(byFingerprint.values()))
+        .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")));
 }
 
 function parseJsonBody(req) {
@@ -384,10 +481,11 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
             const data = readAdminData();
+            const mergedClients = mergeClientRows(data.clients);
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
             res.end(JSON.stringify({
                 ok: true,
-                clients: Array.isArray(data.clients) ? data.clients : []
+                clients: mergedClients
             }));
             return;
         }
@@ -396,7 +494,7 @@ const server = http.createServer(async (req, res) => {
             try {
                 const payload = await parseJsonBody(req);
                 const data = readAdminData();
-                const currentClients = Array.isArray(data.clients) ? data.clients : [];
+                const currentClients = mergeClientRows(data.clients);
                 const clientId = String(payload.clientId || "").trim();
                 if (!clientId) {
                     res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -419,7 +517,11 @@ const server = http.createServer(async (req, res) => {
                     lastSeenAt: new Date().toISOString()
                 };
 
-                const existingIndex = currentClients.findIndex((client) => client.clientId === clientId);
+                const nextClientFingerprint = buildClientFingerprint(nextClient);
+                const existingIndex = currentClients.findIndex((client) =>
+                    client.clientId === clientId ||
+                    buildClientFingerprint(client) === nextClientFingerprint
+                );
                 if (existingIndex >= 0) {
                     currentClients[existingIndex] = {
                         ...currentClients[existingIndex],
@@ -429,9 +531,11 @@ const server = http.createServer(async (req, res) => {
                     currentClients.push(nextClient);
                 }
 
+                const mergedClients = mergeClientRows(currentClients);
+
                 const nextData = {
                     ...data,
-                    clients: currentClients.slice(-100),
+                    clients: mergedClients.slice(0, 100),
                     state: {
                         ...(data.state || {})
                     }
