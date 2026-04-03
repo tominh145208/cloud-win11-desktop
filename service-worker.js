@@ -1,4 +1,4 @@
-const CACHE_NAME = "limore-cloud-shell-v1";
+const CACHE_NAME = "limore-cloud-shell-v2";
 const SHELL_FILES = [
     "/",
     "/index.html",
@@ -35,6 +35,17 @@ self.addEventListener("fetch", (event) => {
 
     const requestUrl = new URL(request.url);
     if (requestUrl.origin !== self.location.origin) {
+        return;
+    }
+
+    const isLiveApi =
+        requestUrl.pathname.startsWith("/api/")
+        || requestUrl.pathname === "/network-info"
+        || requestUrl.pathname === "/health";
+
+    // Never cache live API responses. Always go to network first.
+    if (isLiveApi) {
+        event.respondWith(fetch(request, { cache: "no-store" }));
         return;
     }
 

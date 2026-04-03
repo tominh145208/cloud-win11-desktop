@@ -109,6 +109,7 @@ const mobileFitState = {
 let screenWakeLock = null;
 let wakeLockBootstrapped = false;
 const wakeLockBootstrapEvents = ["pointerdown", "touchstart", "keydown"];
+let lastClientHeartbeatAt = 0;
 
 async function requestScreenWakeLock() {
     if (!("wakeLock" in navigator) || document.visibilityState !== "visible") {
@@ -421,7 +422,13 @@ function syncClientBlockScreen() {
     return false;
 }
 
-function sendClientHeartbeat() {
+function sendClientHeartbeat(force = false) {
+    const now = Date.now();
+    if (!force && now - lastClientHeartbeatAt < 10000) {
+        return;
+    }
+    lastClientHeartbeatAt = now;
+
     const currentUser = getCurrentDesktopUser();
     const payload = {
         clientId: getOrCreateClientId(),
@@ -457,6 +464,13 @@ function sendClientHeartbeat() {
             syncClientBlockScreen();
         })
         .catch(() => {});
+}
+
+function bindClientHeartbeatActivity() {
+    const activityEvents = ["pointerdown", "touchstart", "keydown"];
+    activityEvents.forEach((eventName) => {
+        document.addEventListener(eventName, () => sendClientHeartbeat(), { passive: true });
+    });
 }
 
 function getDefaultLimoreAdminData() {
@@ -513,9 +527,14 @@ function loadLimoreAdminData() {
     return limoreAdminDataCache;
 }
 
+function buildNoCacheUrl(baseUrl) {
+    const separator = String(baseUrl || "").includes("?") ? "&" : "?";
+    return `${baseUrl}${separator}t=${Date.now()}`;
+}
+
 async function fetchLimoreAdminDataFromServer() {
     try {
-        const response = await fetch(LIMORE_ADMIN_DATA_API, {
+        const response = await fetch(buildNoCacheUrl(LIMORE_ADMIN_DATA_API), {
             cache: "no-store",
             headers: {
                 "X-Limore-Client-Id": getOrCreateClientId()
@@ -5023,6 +5042,7 @@ async function bootstrapApp() {
     wireDesktopMenu();
     restoreDesktopState();
     initializeVirtualController();
+    bindClientHeartbeatActivity();
     networkInfoButton?.addEventListener("click", toggleNetworkInfoPanel);
     clockButton?.addEventListener("click", toggleCalendarPanel);
     calendarPrevMonthButton?.addEventListener("click", (event) => {
@@ -5071,15 +5091,15 @@ async function bootstrapApp() {
         }
         sendClientHeartbeat();
     });
-    window.addEventListener("focus", sendClientHeartbeat);
+    window.addEventListener("focus", () => sendClientHeartbeat(true));
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") {
             refreshLimoreAdminDataFromServer();
-            sendClientHeartbeat();
+            sendClientHeartbeat(true);
         }
     });
     setInterval(refreshLimoreAdminDataFromServer, 15000);
-    setInterval(sendClientHeartbeat, 30000);
+    setInterval(() => sendClientHeartbeat(true), 30000);
     volumeButton.addEventListener("click", toggleQuickSettings);
     quickSettings.addEventListener("click", (event) => event.stopPropagation());
     volumeSlider.addEventListener("input", () => syncVolumeUI(volumeSlider.value));
@@ -5096,7 +5116,7 @@ async function bootstrapApp() {
 
     setInterval(updateClock, 1000);
     updateClock();
-    sendClientHeartbeat();
+    sendClientHeartbeat(true);
 }
 
 function registerPwaServiceWorker() {
@@ -5105,7 +5125,9 @@ function registerPwaServiceWorker() {
     }
 
     window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+        navigator.serviceWorker.register("/service-worker.js", { updateViaCache: "none" })
+            .then((registration) => registration.update())
+            .catch(() => {});
     });
 }
 

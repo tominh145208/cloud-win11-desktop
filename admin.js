@@ -251,9 +251,14 @@ function loadAdminData() {
     }
 }
 
+function buildNoCacheUrl(baseUrl) {
+    const separator = String(baseUrl || "").includes("?") ? "&" : "?";
+    return `${baseUrl}${separator}t=${Date.now()}`;
+}
+
 async function fetchAdminDataFromServer() {
     try {
-        const response = await fetch(LIMORE_ADMIN_DATA_API, { cache: "no-store" });
+        const response = await fetch(buildNoCacheUrl(LIMORE_ADMIN_DATA_API), { cache: "no-store" });
         if (!response.ok) {
             throw new Error("Could not load admin data");
         }
@@ -280,7 +285,7 @@ async function saveAdminData() {
 
 async function fetchClientRows() {
     try {
-        const response = await fetch(LIMORE_CLIENTS_API, {
+        const response = await fetch(buildNoCacheUrl(LIMORE_CLIENTS_API), {
             cache: "no-store",
             headers: getAuthHeaders(false)
         });
@@ -453,7 +458,7 @@ function renderClientsTable() {
         .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")))
         .map((client) => {
             const lastSeenAtMs = client.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
-            const isOnline = lastSeenAtMs > 0 && Date.now() - lastSeenAtMs < 45000;
+            const isOnline = lastSeenAtMs > 0 && Date.now() - lastSeenAtMs < 180000;
             const isBlocked = blockedClientIds.has(String(client.clientId || ""));
             const lastSeen = client.lastSeenAt
                 ? new Date(client.lastSeenAt).toLocaleString("vi-VN")

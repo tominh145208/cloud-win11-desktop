@@ -66,11 +66,16 @@ function sendFile(res, filepath) {
         }
 
         const ext = path.extname(filepath).toLowerCase();
+        const fileName = path.basename(filepath).toLowerCase();
         const contentType = MIME_TYPES[ext] || "application/octet-stream";
+        const shouldDisableCache =
+            ext === ".html"
+            || ext === ".webmanifest"
+            || fileName === "service-worker.js";
 
         res.writeHead(200, {
             "Content-Type": contentType,
-            "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=300",
+            "Cache-Control": shouldDisableCache ? "no-cache, no-store, must-revalidate" : "public, max-age=300",
             "Access-Control-Allow-Origin": "*"
         });
         res.end(fileBuffer);
