@@ -196,8 +196,10 @@ let adminAlerts = [];
 let adminFirewallRules = [];
 let dashboardStats = { hourly: [], daily: [] };
 let hasHydratedClientPresence = false;
-const knownClientPresence = new Set();
+const knownClientPresence = new Map();
 let realtimeAudioContext = null;
+const CLIENT_ONLINE_THRESHOLD_MS = 180000;
+const CLIENT_RECENT_WINDOW_MS = 45000;
 const clientFilters = {
     online: "all",
     device: "all",
@@ -512,36 +514,57 @@ function warmupJoinSoundContext() {
 function handleRealtimeClientJoin(rows) {
     const mergedRows = mergeClientRows(rows);
     const rowMap = new Map();
+    const now = Date.now();
     mergedRows.forEach((client) => {
-        rowMap.set(getClientPresenceKey(client), client);
+        const key = getClientPresenceKey(client);
+        const seenMs = client?.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
+        const isOnline = seenMs > 0 && now - seenMs < CLIENT_ONLINE_THRESHOLD_MS;
+        rowMap.set(key, {
+            client,
+            seenMs,
+            isOnline
+        });
     });
 
     if (!hasHydratedClientPresence) {
         knownClientPresence.clear();
-        rowMap.forEach((_, key) => knownClientPresence.add(key));
+        rowMap.forEach((entry, key) => {
+            knownClientPresence.set(key, {
+                seenMs: entry.seenMs,
+                isOnline: entry.isOnline
+            });
+        });
         hasHydratedClientPresence = true;
         return;
     }
 
-    const now = Date.now();
-    rowMap.forEach((client, key) => {
-        if (knownClientPresence.has(key)) {
-            return;
+    rowMap.forEach((entry, key) => {
+        const previous = knownClientPresence.get(key);
+        const isRecent = entry.seenMs > 0 && now - entry.seenMs <= CLIENT_RECENT_WINDOW_MS;
+        let shouldNotify = false;
+
+        if (!previous) {
+            shouldNotify = isRecent;
+        } else if (!previous.isOnline && entry.isOnline) {
+            shouldNotify = true;
         }
-        knownClientPresence.add(key);
-        const seenMs = client?.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
-        if (!seenMs || now - seenMs > 45000) {
-            return;
+
+        if (shouldNotify) {
+            const deviceTitle = getClientDeviceTitle(entry.client);
+            const displayName = getClientPresenceDisplayName(entry.client);
+            const ipDisplay = String(entry.client?.ipAddress || "khong ro IP");
+            showRealtimeJoinToast("Co nguoi vua vao web", `${displayName} • ${deviceTitle} • ${ipDisplay}`);
+            playJoinTingSound();
         }
-        const deviceTitle = getClientDeviceTitle(client);
-        const displayName = getClientPresenceDisplayName(client);
-        const ipDisplay = String(client?.ipAddress || "khong ro IP");
-        showRealtimeJoinToast("Co nguoi vua vao web", `${displayName} • ${deviceTitle} • ${ipDisplay}`);
-        playJoinTingSound();
+
+        knownClientPresence.set(key, {
+            seenMs: entry.seenMs,
+            isOnline: entry.isOnline
+        });
     });
 
     const currentKeys = new Set(rowMap.keys());
-    Array.from(knownClientPresence).forEach((key) => {
+    Array.from(knownClientPresence.keys()).forEach((key) => {
         if (!currentKeys.has(key)) {
             knownClientPresence.delete(key);
         }
