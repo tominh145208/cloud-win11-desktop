@@ -138,6 +138,43 @@ function getBlockedClientIds(data) {
         : [];
 }
 
+function getClientUserBindings(data) {
+    const raw = data?.state?.clientUserBindings;
+    if (!raw || typeof raw !== "object") {
+        return {};
+    }
+    return Object.fromEntries(
+        Object.entries(raw)
+            .map(([key, value]) => [String(key || "").trim(), String(value || "").trim()])
+            .filter(([key, value]) => key && value)
+    );
+}
+
+function getIpUserBindings(data) {
+    const raw = data?.state?.ipUserBindings;
+    if (!raw || typeof raw !== "object") {
+        return {};
+    }
+    return Object.fromEntries(
+        Object.entries(raw)
+            .map(([key, value]) => [String(key || "").trim(), String(value || "").trim()])
+            .filter(([key, value]) => key && value)
+    );
+}
+
+function getClientIp(req) {
+    const forwarded = String(req.headers["x-forwarded-for"] || "")
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+    if (forwarded.length > 0) {
+        return forwarded[0];
+    }
+
+    const remoteAddress = String(req.socket?.remoteAddress || req.connection?.remoteAddress || "").trim();
+    return remoteAddress.replace(/^::ffff:/, "");
+}
+
 function parseJsonBody(req) {
     return new Promise((resolve, reject) => {
         let raw = "";
@@ -295,10 +332,17 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === "/api/limore-admin-data") {
         if (req.method === "GET") {
+            const data = readAdminData();
+            const clientId = String(req.headers["x-limore-client-id"] || "").trim();
+            const clientIp = getClientIp(req);
+            const clientUserBindings = getClientUserBindings(data);
+            const ipUserBindings = getIpUserBindings(data);
+            const rememberedCurrentUserId = clientUserBindings[clientId] || ipUserBindings[clientIp] || "";
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
             res.end(JSON.stringify({
                 ok: true,
-                data: readAdminData()
+                data,
+                rememberedCurrentUserId
             }));
             return;
         }
@@ -362,6 +406,7 @@ const server = http.createServer(async (req, res) => {
 
                 const nextClient = {
                     clientId,
+                    ipAddress: getClientIp(req),
                     deviceType: String(payload.deviceType || "unknown"),
                     userAgent: String(payload.userAgent || ""),
                     currentPage: String(payload.currentPage || ""),
@@ -386,8 +431,26 @@ const server = http.createServer(async (req, res) => {
 
                 const nextData = {
                     ...data,
-                    clients: currentClients.slice(-100)
+                    clients: currentClients.slice(-100),
+                    state: {
+                        ...(data.state || {})
+                    }
                 };
+
+                if (nextClient.setupComplete && nextClient.currentUserId) {
+                    nextData.state.clientUserBindings = {
+                        ...getClientUserBindings(nextData),
+                        [clientId]: nextClient.currentUserId
+                    };
+
+                    if (nextClient.ipAddress) {
+                        nextData.state.ipUserBindings = {
+                            ...getIpUserBindings(nextData),
+                            [nextClient.ipAddress]: nextClient.currentUserId
+                        };
+                    }
+                }
+
                 const blockedClientIds = getBlockedClientIds(nextData);
                 writeAdminData(nextData);
                 res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });

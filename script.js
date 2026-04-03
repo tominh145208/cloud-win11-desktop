@@ -513,12 +513,23 @@ function loadLimoreAdminData() {
 
 async function fetchLimoreAdminDataFromServer() {
     try {
-        const response = await fetch(LIMORE_ADMIN_DATA_API, { cache: "no-store" });
+        const response = await fetch(LIMORE_ADMIN_DATA_API, {
+            cache: "no-store",
+            headers: {
+                "X-Limore-Client-Id": getOrCreateClientId()
+            }
+        });
         if (!response.ok) {
             throw new Error("Could not load admin data");
         }
         const payload = await response.json();
-        limoreAdminDataCache = mergeLimoreAdminData(payload?.data || {});
+        limoreAdminDataCache = mergeLimoreAdminData({
+            ...(payload?.data || {}),
+            state: {
+                ...((payload?.data || {}).state || {}),
+                rememberedCurrentUserId: String(payload?.rememberedCurrentUserId || "")
+            }
+        });
         try {
             localStorage.setItem(LIMORE_ADMIN_DATA_KEY, JSON.stringify(limoreAdminDataCache));
         } catch (error) {
@@ -618,9 +629,15 @@ function applyLimoreAdminData(data = loadLimoreAdminData()) {
     limoreCloudPackages = sanitizeLimoreCloudPackages(data.packages);
     desktopUsers = sanitizeDesktopUsers(data.users);
     const storedDesktopUserId = getStoredDesktopUserId();
+    const rememberedCurrentUserId = String(data?.state?.rememberedCurrentUserId || "").trim();
     const matchedDesktopUser = desktopUsers.find((user) => user.id === storedDesktopUserId);
-    currentDesktopUserId = matchedDesktopUser?.id || "";
-    initialSetupComplete = Boolean(matchedDesktopUser);
+    const rememberedDesktopUser = desktopUsers.find((user) => user.id === rememberedCurrentUserId);
+    const resolvedDesktopUser = matchedDesktopUser || rememberedDesktopUser || null;
+    currentDesktopUserId = resolvedDesktopUser?.id || "";
+    initialSetupComplete = Boolean(resolvedDesktopUser);
+    if (resolvedDesktopUser?.id) {
+        storeDesktopUserId(resolvedDesktopUser.id);
+    }
     blockedClientIds = Array.isArray(data.state?.blockedClientIds)
         ? data.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
