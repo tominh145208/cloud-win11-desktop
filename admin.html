@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Limore Admin</title>
+    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="admin-auth-screen" class="admin-auth-screen">
+        <form id="admin-login-form" class="admin-auth-card">
+            <p class="admin-kicker">Limore Cloud</p>
+            <h1>Dang nhap admin</h1>
+            <p class="admin-copy">Trang nay da duoc khoa. Chi ai biet link va mat khau moi vao duoc quan tri.</p>
+            <label class="field">
+                <span>Mat khau admin</span>
+                <input id="admin-password-input" type="password" placeholder="Nhap mat khau" autocomplete="current-password">
+            </label>
+            <button id="admin-login-button" type="submit" class="admin-btn is-primary">Vao admin</button>
+            <p id="admin-auth-error" class="admin-auth-error" aria-live="polite"></p>
+            <p class="admin-auth-hint">Mat khau mac dinh luc moi tao la <strong>12345</strong>. Vao trong admin de doi lai ngay.</p>
+        </form>
+    </div>
+
+    <main id="admin-shell" class="admin-shell" hidden>
+        <section class="admin-hero">
+            <div>
+                <p class="admin-kicker">Limore Cloud</p>
+                <h1>Trang quan ly</h1>
+                <p class="admin-copy">Sua game, goi cloud, user desktop va theo doi thiet bi/mobile dang vao. Du lieu duoc dong bo qua server chung.</p>
+            </div>
+            <div class="admin-actions">
+                <button id="save-all-button" type="button" class="admin-btn is-primary">Luu tat ca</button>
+                <button id="reset-defaults-button" type="button" class="admin-btn">Khoi phuc mac dinh</button>
+            </div>
+        </section>
+
+        <section class="admin-overview">
+            <article class="overview-card">
+                <span>So du</span>
+                <strong id="overview-balance">0d</strong>
+            </article>
+            <article class="overview-card">
+                <span>Goi dang dung</span>
+                <strong id="overview-package">Chua co</strong>
+            </article>
+            <article class="overview-card">
+                <span>Tong game</span>
+                <strong id="overview-games">0</strong>
+            </article>
+        </section>
+
+        <section class="admin-grid">
+            <article class="admin-panel">
+                <div class="panel-head">
+                    <h2>Nguoi dung desktop</h2>
+                    <p>Quan ly user dang dung tren desktop va Limore Cloud.</p>
+                </div>
+                <div class="panel-body form-grid">
+                    <label class="field">
+                        <span>User hien tai</span>
+                        <select id="current-user-input"></select>
+                    </label>
+                    <label class="field">
+                        <span>Desktop name</span>
+                        <input id="desktop-name-input" type="text" placeholder="Dz Minh">
+                    </label>
+                    <label class="field">
+                        <span>Limore name</span>
+                        <input id="limore-name-input" type="text" placeholder="Anonymous">
+                    </label>
+                    <label class="field">
+                        <span>So du</span>
+                        <input id="balance-input" type="number" min="0" step="1000" placeholder="0">
+                    </label>
+                    <label class="field">
+                        <span>Goi dang dung</span>
+                        <select id="active-package-input"></select>
+                    </label>
+                </div>
+            </article>
+
+            <article class="admin-panel">
+                <div class="panel-head">
+                    <h2>Bao mat admin</h2>
+                    <p>Khoa admin bang mat khau va doi mat khau ngay trong trang nay.</p>
+                </div>
+                <div class="panel-body form-grid admin-security-grid">
+                    <label class="field">
+                        <span>Mat khau hien tai</span>
+                        <input id="admin-current-password" type="password" placeholder="Mat khau hien tai">
+                    </label>
+                    <label class="field">
+                        <span>Mat khau moi</span>
+                        <input id="admin-new-password" type="password" placeholder="Mat khau moi">
+                    </label>
+                    <label class="field">
+                        <span>Nhap lai mat khau moi</span>
+                        <input id="admin-confirm-password" type="password" placeholder="Nhap lai mat khau moi">
+                    </label>
+                    <button id="change-password-button" type="button" class="admin-btn is-primary">Doi mat khau</button>
+                </div>
+                <div class="panel-body notes">
+                    <p>1. Sua thong tin game, goi hoac so du.</p>
+                    <p>2. Bam <strong>Luu tat ca</strong>.</p>
+                    <p>3. Quay lai desktop chinh, Limore Cloud se dong bo. Neu app dang mo, no se tu refresh lai.</p>
+                </div>
+            </article>
+        </section>
+
+        <section class="admin-panel">
+            <div class="panel-head">
+                <h2>Danh sach user</h2>
+                <p>Them, xoa va chuyen user desktop dang hoat dong.</p>
+            </div>
+            <div class="panel-body">
+                <div class="game-form-grid user-form-grid">
+                    <label class="field">
+                        <span>User ID</span>
+                        <input id="new-user-id" type="text" placeholder="minh">
+                    </label>
+                    <label class="field">
+                        <span>Desktop name</span>
+                        <input id="new-user-desktop-name" type="text" placeholder="Dz Minh">
+                    </label>
+                    <label class="field">
+                        <span>Limore name</span>
+                        <input id="new-user-limore-name" type="text" placeholder="Anonymous">
+                    </label>
+                    <button id="add-user-button" type="button" class="admin-btn is-primary">Them user</button>
+                </div>
+                <div class="games-table-wrap">
+                    <table class="games-table">
+                        <thead>
+                            <tr>
+                                <th>Dang dung</th>
+                                <th>User ID</th>
+                                <th>Desktop name</th>
+                                <th>Limore name</th>
+                                <th>So du</th>
+                                <th>Goi</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="admin-panel">
+            <div class="panel-head">
+                <h2>Client ben ngoai / mobile</h2>
+                <p>Danh sach trinh duyet, thiet bi va user an danh dang vao he thong.</p>
+            </div>
+            <div class="panel-body">
+                <div class="games-table-wrap">
+                    <table class="games-table">
+                        <thead>
+                            <tr>
+                                <th>Thiet bi</th>
+                                <th>User desktop</th>
+                                <th>Limore</th>
+                                <th>Trang</th>
+                                <th>Loai</th>
+                                <th>Online</th>
+                                <th>Trang thai</th>
+                                <th>Lan cuoi</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="admin-panel">
+            <div class="panel-head">
+                <h2>Goi Cloud</h2>
+                <p>Sua ten goi, gia, mo ta va cau hinh.</p>
+            </div>
+            <div id="packages-form" class="package-admin-grid"></div>
+        </section>
+
+        <section class="admin-panel">
+            <div class="panel-head">
+                <h2>Thu vien game</h2>
+                <p>Them, xoa va sua danh sach game hien trong Limore Cloud.</p>
+            </div>
+            <div class="panel-body">
+                <div class="game-form-grid">
+                    <label class="field">
+                        <span>Steam App ID</span>
+                        <input id="new-game-appid" type="number" min="1" placeholder="730">
+                    </label>
+                    <label class="field">
+                        <span>Ten game</span>
+                        <input id="new-game-title" type="text" placeholder="Counter-Strike 2">
+                    </label>
+                    <label class="field">
+                        <span>The loai</span>
+                        <input id="new-game-genre" type="text" placeholder="FPS Tactical">
+                    </label>
+                    <label class="field">
+                        <span>Nam</span>
+                        <input id="new-game-release" type="text" placeholder="2026">
+                    </label>
+                    <label class="field field-wide">
+                        <span>Sections</span>
+                        <input id="new-game-sections" type="text" placeholder="home games played saves">
+                    </label>
+                    <button id="add-game-button" type="button" class="admin-btn is-primary">Them game</button>
+                </div>
+
+                <div class="games-table-wrap">
+                    <table class="games-table">
+                        <thead>
+                            <tr>
+                                <th>App ID</th>
+                                <th>Ten game</th>
+                                <th>The loai</th>
+                                <th>Nam</th>
+                                <th>Sections</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="games-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <div id="admin-status" class="admin-status" aria-live="polite"></div>
+    </main>
+
+    <script src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "win11-desktop-lan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Windows 11 desktop UI mock running on LAN",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "run": "node server.js"
+  }
+}

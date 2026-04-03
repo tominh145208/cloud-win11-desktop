@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Windows 11 Dark Edition</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="is-booting is-locked">
+    <div id="boot-screen" class="boot-screen" aria-hidden="true">
+        <div class="boot-screen-inner">
+            <div class="boot-logo">
+                <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="boot-copy">
+                <strong>Windows 11 Dark Edition</strong>
+                <span>Dang khoi dong he thong...</span>
+            </div>
+            <div class="boot-spinner" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="lock-screen" class="lock-screen" aria-hidden="true">
+        <div class="lock-screen-backdrop"></div>
+        <div class="lock-screen-clock">
+            <div id="lock-time" class="lock-time">12:00</div>
+            <div id="lock-date" class="lock-date">Wednesday, April 1</div>
+            <div class="lock-hint">Cham hoac bam phim bat ky de dang nhap</div>
+        </div>
+        <div id="setup-panel" class="setup-panel" aria-hidden="true">
+            <div class="setup-panel-copy">
+                <span class="setup-kicker">Windows 11 Setup</span>
+                <strong>Tao tai khoan dau tien</strong>
+                <p>Lan dau vao web, ban can tao user desktop de bat dau su dung he thong.</p>
+            </div>
+            <label class="setup-field">
+                <span>Ten desktop</span>
+                <input id="setup-desktop-name" type="text" placeholder="Dz Minh" maxlength="32">
+            </label>
+            <label class="setup-field">
+                <span>Ten Limore Cloud</span>
+                <input id="setup-limore-name" type="text" placeholder="Anonymous" maxlength="32">
+            </label>
+            <button id="create-account-button" type="button" class="unlock-button">Tao tai khoan</button>
+        </div>
+        <div id="login-panel" class="login-panel" aria-hidden="true">
+            <img src="https://img.icons8.com/fluency/96/user-male-circle.png" alt="User avatar">
+            <strong id="lock-user-name">Dz Minh</strong>
+            <span>Windows 11 Dark Edition</span>
+            <button id="unlock-button" type="button" class="unlock-button">Dang nhap</button>
+        </div>
+    </div>
+
+    <div id="client-block-screen" class="client-block-screen" hidden>
+        <div class="client-block-card">
+            <span class="setup-kicker">Limore Security</span>
+            <strong>Thiet bi nay da bi admin ngat</strong>
+            <p>Desktop/mobile nay tam thoi khong duoc vao he thong. Neu ban vua duoc mo lai, bam thu lai de dong bo trang thai moi.</p>
+            <button id="blocked-refresh-button" type="button" class="unlock-button">Thu lai</button>
+        </div>
+    </div>
+
+    <div id="ui-shell">
+    <div class="desktop" onclick="closeStart(event)">
+        <div id="desktop-icons" class="desktop-icons">
+            <div class="shortcut app-launcher" data-app="thispc"><img src="assets/this-pc-custom-v3.png"><span>This PC</span></div>
+            <div class="shortcut app-launcher" data-app="recycle"><img src="assets/recycle-bin-custom-v3.png"><span>Recycle Bin</span></div>
+            <div class="shortcut app-launcher" data-app="chrome"><img src="https://img.icons8.com/color/48/chrome--v1.png"><span>Chrome</span></div>
+            <div class="shortcut app-launcher" data-app="gamecloud"><img src="assets/game-cloud.webp"><span>Limore Cloud</span></div>
+        </div>
+        <div id="desktop-selection-box" class="desktop-selection-box" hidden></div>
+
+        <div id="window-layer" class="window-layer"></div>
+
+        <div id="start-menu" class="start-menu">
+            <div class="start-search">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search for apps, settings, and documents">
+            </div>
+
+            <div class="start-content">
+                <div class="start-section">
+                    <div class="section-header"><span>Pinned</span> <button>All apps ></button></div>
+                    <div id="start-pinned-grid" class="pinned-grid">
+                        <div class="item app-launcher" data-app="edge"><img src="https://img.icons8.com/fluency/48/microsoft-edge.png"><span>Edge</span></div>
+                        <div class="item app-launcher" data-app="word"><img src="https://img.icons8.com/fluency/48/microsoft-word-2019.png"><span>Word</span></div>
+                        <div class="item app-launcher" data-app="settings"><img src="https://img.icons8.com/fluency/48/settings.png"><span>Settings</span></div>
+                        <div class="item app-launcher" data-app="files"><img src="https://img.icons8.com/color/48/folder-invoices--v1.png"><span>Files</span></div>
+                        <div class="item app-launcher" data-app="chrome"><img src="https://img.icons8.com/color/48/chrome--v1.png"><span>Chrome</span></div>
+                        <div class="item app-launcher" data-app="gamecloud"><img src="assets/game-cloud.webp"><span>Limore Cloud</span></div>
+                    </div>
+                </div>
+
+                <div class="start-section">
+                    <div class="section-header"><span>All Categories</span></div>
+                    <div class="category-row">
+                        <div class="cat-group">
+                            <div class="cat-icons">
+                                <img src="https://img.icons8.com/fluency/48/monitor.png"><img src="https://img.icons8.com/color/48/vlc.png">
+                                <img src="https://img.icons8.com/color/48/adobe-illustrator.png"><img src="https://img.icons8.com/fluency/48/settings.png">
+                            </div>
+                            <span>Utilities & Tools</span>
+                        </div>
+                        <div class="cat-group">
+                            <div class="cat-icons">
+                                <img src="https://img.icons8.com/color/48/spotify.png"><img src="https://img.icons8.com/color/48/league-of-legends.png">
+                                <img src="https://img.icons8.com/color/48/visual-studio-code-2019.png"><img src="https://img.icons8.com/color/48/notepad.png">
+                            </div>
+                            <span>Other</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="start-footer">
+                <div class="user-info">
+                    <img src="https://img.icons8.com/fluency/48/user-male-circle.png">
+                    <span id="start-user-name">Dz Minh</span>
+                </div>
+                <i class="fas fa-power-off"></i>
+            </div>
+        </div>
+
+        <div id="search-panel" class="search-panel">
+            <div class="search-panel-header">
+                <strong>Search</strong>
+                <span>Tim app, file va tac vu nhanh</span>
+            </div>
+            <label class="search-panel-box">
+                <i class="fas fa-search"></i>
+                <input id="search-panel-input" type="text" placeholder="Nhap ten app, file hoac lenh...">
+            </label>
+            <div id="search-panel-results" class="search-panel-results"></div>
+        </div>
+
+        <div id="widgets-board" class="widgets-board">
+            <div class="widgets-board-header">
+                <strong>Widgets</strong>
+                <span>Thong tin nhanh tren desktop</span>
+            </div>
+            <div class="widgets-grid">
+                <article class="widget-card weather">
+                    <span class="widget-kicker">Weather</span>
+                    <strong id="widget-weather-temp">31°C</strong>
+                    <p>Ho Chi Minh City, troi quang</p>
+                </article>
+                <article class="widget-card notes">
+                    <span class="widget-kicker">Quick note</span>
+                    <strong>Desktop Win11</strong>
+                    <p>Luu vi tri cua so, thong bao va cloud app trong cung mot giao dien.</p>
+                </article>
+                <article class="widget-card activity">
+                    <span class="widget-kicker">Activity</span>
+                    <strong id="widget-open-apps">0 apps</strong>
+                    <p>Dang mo tren desktop hien tai</p>
+                </article>
+                <article class="widget-card tip">
+                    <span class="widget-kicker">Tip</span>
+                    <strong>Search & Run</strong>
+                    <p>Bam Search o taskbar hoac mo Run tu menu desktop de thao tac nhanh.</p>
+                </article>
+            </div>
+        </div>
+
+        <div id="task-view-panel" class="task-view-panel">
+            <div class="task-view-header">
+                <div>
+                    <strong>Task View</strong>
+                    <span>Xem tat ca cua so dang mo va desktop ao</span>
+                </div>
+            </div>
+            <div id="task-view-grid" class="task-view-grid"></div>
+            <div id="virtual-desktops" class="virtual-desktops"></div>
+        </div>
+
+        <div id="notification-center" class="notification-center">
+            <div class="notification-center-header">
+                <div>
+                    <strong>Notification Center</strong>
+                    <span id="notification-center-date">Thursday, April 2</span>
+                </div>
+                <button id="clear-notifications-button" type="button">Clear all</button>
+            </div>
+            <div id="notification-history" class="notification-history"></div>
+        </div>
+
+        <div id="run-dialog" class="run-dialog" hidden aria-hidden="true">
+            <div class="run-dialog-card">
+                <div class="run-dialog-header">
+                    <img src="https://img.icons8.com/fluency/48/run-command.png" alt="Run">
+                    <div>
+                        <strong>Run</strong>
+                        <span>Type the name of a program, folder, document, or Internet resource.</span>
+                    </div>
+                </div>
+                <label class="run-dialog-field">
+                    <span>Open:</span>
+                    <input id="run-dialog-input" type="text" placeholder="chrome" autocomplete="off" autocapitalize="off" spellcheck="false">
+                </label>
+                <div class="run-dialog-actions">
+                    <button id="run-dialog-ok" type="button" class="primary">OK</button>
+                    <button id="run-dialog-cancel" type="button">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="power-menu" class="power-menu">
+            <button type="button" data-power-action="sleep"><i class="fas fa-moon"></i><span>Sleep</span></button>
+            <button type="button" data-power-action="lock"><i class="fas fa-lock"></i><span>Lock</span></button>
+            <button type="button" data-power-action="restart"><i class="fas fa-rotate-right"></i><span>Restart</span></button>
+            <button type="button" data-power-action="shutdown"><i class="fas fa-power-off"></i><span>Shut down</span></button>
+        </div>
+
+        <div id="winx-menu" class="winx-menu">
+            <button type="button" data-winx-action="taskmanager"><i class="fas fa-gauge-high"></i><span>Task Manager</span></button>
+            <button type="button" data-winx-action="thispc"><i class="fas fa-computer"></i><span>File Explorer</span></button>
+            <button type="button" data-winx-action="settings"><i class="fas fa-gear"></i><span>Settings</span></button>
+            <button type="button" data-winx-action="systeminfo"><i class="fas fa-circle-info"></i><span>System</span></button>
+            <button type="button" data-winx-action="run"><i class="fas fa-terminal"></i><span>Run</span></button>
+        </div>
+
+        <div id="shortcut-context-menu" class="shortcut-context-menu"></div>
+        <div id="taskbar-preview" class="taskbar-preview"></div>
+        <div id="toast-container" class="toast-container"></div>
+        <div id="snap-assist-overlay" class="snap-assist-overlay"></div>
+        <div id="alt-tab-overlay" class="alt-tab-overlay" hidden></div>
+    </div>
+
+    <div class="taskbar">
+        <div class="taskbar-left"></div>
+        <div class="taskbar-center">
+            <div class="t-icon" id="start-button" onclick="toggleStart(event)"><img src="https://img.icons8.com/fluency/48/windows-11.png"></div>
+            <button id="taskbar-search-button" class="taskbar-search" type="button">
+                <i class="fas fa-search"></i>
+                <span>Search</span>
+            </button>
+            <button id="task-view-button" class="t-icon" type="button"><img src="https://img.icons8.com/fluency/48/task-view.png"></button>
+            <div class="t-icon app-launcher taskbar-app" data-app="files"><img src="https://img.icons8.com/color/48/folder-invoices--v1.png"></div>
+            <div id="running-apps" class="taskbar-running"></div>
+        </div>
+        <div class="taskbar-right">
+            <div class="sys-tray">
+                <button id="widgets-button" class="tray-btn" type="button" aria-label="Widgets">
+                    <i class="far fa-newspaper"></i>
+                </button>
+                <button id="network-info-button" class="tray-btn network-info-btn" type="button" aria-label="LAN links">
+                    <span>LAN</span>
+                </button>
+                <button id="tray-flyout-button" class="tray-btn" type="button" aria-label="System tray">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <i id="tray-wifi-icon" class="fas fa-wifi"></i>
+                <button id="volume-button" class="tray-btn" type="button" aria-label="Volume settings">
+                    <i id="volume-icon" class="fas fa-volume-up"></i>
+                </button>
+            </div>
+            <button id="clock-button" class="clock" type="button" aria-label="Open calendar panel">
+                <div id="time"></div>
+                <div id="date"></div>
+            </button>
+        </div>
+    </div>
+
+    <div id="network-info-panel" class="network-info-panel">
+        <div class="network-info-header">
+            <strong>LAN Mobile Links</strong>
+            <span>Mo link nay tren dien thoai cung mang Wi-Fi</span>
+        </div>
+        <div class="network-info-section">
+            <div class="network-info-label">Current</div>
+            <div id="network-current-link" class="network-info-link">Loading...</div>
+        </div>
+        <div class="network-info-section">
+            <div class="network-info-label">LAN</div>
+            <div id="network-lan-links" class="network-info-list">Loading...</div>
+        </div>
+    </div>
+
+    <div id="calendar-panel" class="calendar-panel">
+        <div class="calendar-panel-header">
+            <div>
+                <div id="calendar-today-label" class="calendar-today-label">Wednesday, April 1</div>
+                <strong id="calendar-time-label" class="calendar-time-label">12:00 PM</strong>
+            </div>
+            <button id="open-wallpaper-panel" class="calendar-panel-link" type="button">Wallpaper</button>
+        </div>
+        <div class="calendar-month-bar">
+            <button id="calendar-prev-month" class="calendar-month-btn" type="button" aria-label="Previous month">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <strong id="calendar-month-label">April 2026</strong>
+            <button id="calendar-next-month" class="calendar-month-btn" type="button" aria-label="Next month">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        <div class="calendar-weekdays">
+            <span>CN</span>
+            <span>T2</span>
+            <span>T3</span>
+            <span>T4</span>
+            <span>T5</span>
+            <span>T6</span>
+            <span>T7</span>
+        </div>
+        <div id="calendar-grid" class="calendar-grid"></div>
+    </div>
+
+    <div id="desktop-theme-panel" class="desktop-theme-panel">
+        <div class="desktop-theme-header">
+            <div>
+                <strong>Backgrounds</strong>
+                <span>Doi hinh nen desktop nhanh</span>
+            </div>
+            <button id="close-wallpaper-panel" class="desktop-theme-close" type="button" aria-label="Close wallpaper panel">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+        <div class="desktop-theme-grid">
+            <button class="wallpaper-option" type="button" data-wallpaper="black">
+                <img src="assets/windows-11-black-wallpaper-2400x1350_50.jpg" alt="Windows 11 Dark">
+                <span>Windows Dark</span>
+            </button>
+            <button class="wallpaper-option" type="button" data-wallpaper="wukong">
+                <img src="assets/wukong-hero.jpg" alt="Black Myth Wukong">
+                <span>Wukong Hero</span>
+            </button>
+            <button class="wallpaper-option" type="button" data-wallpaper="gta">
+                <img src="assets/gta5-hero.jpg" alt="GTA V">
+                <span>GTA V Hero</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="quick-settings" class="quick-settings">
+        <div class="qs-status-row">
+            <div class="qs-device">
+                <strong>Quick Settings</strong>
+                <span>Windows 11 system controls</span>
+            </div>
+            <div class="qs-badges">
+                <span id="battery-status-badge" class="qs-status-chip">97%</span>
+                <span id="brightness-status-badge" class="qs-status-chip">80%</span>
+            </div>
+        </div>
+        <div class="qs-grid">
+            <button type="button" class="qs-tile active" data-toggle-setting="wifi"><i class="fas fa-wifi"></i><span>Wi-Fi</span></button>
+            <button type="button" class="qs-tile active" data-toggle-setting="bluetooth"><i class="fab fa-bluetooth-b"></i><span>Bluetooth</span></button>
+            <button type="button" class="qs-tile" data-toggle-setting="airplane"><i class="fas fa-plane"></i><span>Airplane mode</span></button>
+            <button type="button" class="qs-tile active" data-toggle-setting="nightlight"><i class="far fa-sun"></i><span>Night light</span></button>
+            <button type="button" class="qs-tile" data-toggle-setting="accessibility"><i class="fas fa-universal-access"></i><span>Accessibility</span></button>
+            <button type="button" class="qs-tile active" data-toggle-setting="battery"><i class="far fa-battery-three-quarters"></i><span>Battery saver</span></button>
+        </div>
+
+        <div class="qs-volume">
+            <i id="qs-volume-icon" class="fas fa-volume-low"></i>
+            <input id="volume-slider" type="range" min="0" max="100" value="62" aria-label="Volume slider">
+            <span id="volume-value">62</span>
+        </div>
+
+        <div class="qs-brightness">
+            <i class="far fa-sun"></i>
+            <input id="brightness-slider" type="range" min="35" max="100" value="80" aria-label="Brightness slider">
+            <span id="brightness-value">80</span>
+        </div>
+
+        <div class="qs-footer">
+            <button id="open-taskmanager-button" type="button" aria-label="Open Task Manager"><i class="fas fa-gauge-high"></i></button>
+            <button id="open-systeminfo-button" type="button" aria-label="Open System Info"><i class="fas fa-circle-info"></i></button>
+            <button type="button" aria-label="Sound settings"><i class="fas fa-gear"></i></button>
+        </div>
+    </div>
+
+    <button id="controller-menu-toggle" class="controller-menu-toggle" type="button" aria-label="Open controller menu">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <section id="controller-menu" class="controller-menu">
+        <div class="controller-menu-header">
+            <div>
+                <span>Connection duration:</span>
+                <strong id="controller-uptime">00:00</strong>
+            </div>
+            <div class="controller-ping-badge" id="controller-ping">45ms</div>
+        </div>
+        <div class="controller-menu-actions">
+            <button id="toggle-physical-gamepad" type="button" class="controller-action-btn is-primary">Dung tay cam PC</button>
+            <button id="toggle-touch-mouse" type="button" class="controller-action-btn">Mouse mode</button>
+            <button id="toggle-touch-left-hold" type="button" class="controller-action-btn">Giu chuot trai</button>
+            <button id="toggle-virtual-gamepad" type="button" class="controller-action-btn is-primary">Bat tay cam ao</button>
+            <button id="toggle-layout-edit" type="button" class="controller-action-btn">Chinh vi tri</button>
+            <button id="controller-size-down" type="button" class="controller-action-btn">Thu nho nut</button>
+            <button id="controller-size-up" type="button" class="controller-action-btn">Phong to nut</button>
+            <button id="controller-reset-layout" type="button" class="controller-action-btn">Reset layout</button>
+        </div>
+    </section>
+
+    <section id="virtual-gamepad" class="virtual-gamepad" aria-hidden="false">
+        <button type="button" class="vg-control vg-shoulder" data-control="lt" style="left:24px;top:84px;">LT</button>
+        <button type="button" class="vg-control vg-round vg-mid-btn" data-control="pause" style="left:270px;top:56px;">Pause</button>
+        <button type="button" class="vg-control vg-round vg-mid-btn" data-control="start" style="left:414px;top:56px;">Start</button>
+        <button type="button" class="vg-control vg-shoulder" data-control="rt" style="right:140px;top:122px;">RT</button>
+        <button type="button" class="vg-control vg-shoulder" data-control="lb" style="left:124px;top:164px;">LB</button>
+        <button type="button" class="vg-control vg-shoulder" data-control="rb" style="right:178px;top:196px;">RB</button>
+
+        <div class="vg-control vg-stick-wrap" data-control="leftStick" style="left:28px;bottom:94px;">
+            <div class="vg-stick-ring">
+                <div class="vg-stick-thumb">L</div>
+            </div>
+        </div>
+
+        <div class="vg-control vg-dpad-wrap" data-control="dpad" style="left:196px;bottom:126px;">
+            <button type="button" class="vg-dpad-btn" data-control="dpadUp"><i class="fas fa-caret-up"></i></button>
+            <button type="button" class="vg-dpad-btn" data-control="dpadLeft"><i class="fas fa-caret-left"></i></button>
+            <button type="button" class="vg-dpad-btn" data-control="dpadRight"><i class="fas fa-caret-right"></i></button>
+            <button type="button" class="vg-dpad-btn" data-control="dpadDown"><i class="fas fa-caret-down"></i></button>
+        </div>
+
+        <div class="vg-control vg-stick-wrap" data-control="rightStick" style="left:438px;bottom:108px;">
+            <div class="vg-stick-ring">
+                <div class="vg-stick-thumb">R</div>
+            </div>
+        </div>
+
+        <button type="button" class="vg-control vg-round vg-face-btn" data-control="y" style="right:196px;bottom:236px;">Y</button>
+        <button type="button" class="vg-control vg-round vg-face-btn" data-control="x" style="right:260px;bottom:160px;">X</button>
+        <button type="button" class="vg-control vg-round vg-face-btn" data-control="b" style="right:130px;bottom:160px;">B</button>
+        <button type="button" class="vg-control vg-round vg-face-btn" data-control="a" style="right:196px;bottom:98px;">A</button>
+
+        <button type="button" class="vg-control vg-round vg-stick-btn" data-control="rs" style="left:164px;bottom:30px;">RS</button>
+        <button type="button" class="vg-control vg-round vg-stick-btn" data-control="ls" style="left:552px;bottom:34px;">LS</button>
+    </section>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="desktop-enhancements.js"></script>
+</body>
+</html>
