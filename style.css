@@ -31,6 +31,7 @@ body {
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body.touch-mouse-mode {
@@ -326,6 +327,7 @@ body.is-client-blocked #ui-shell {
     background: rgba(255, 255, 255, 0.08);
     color: #f6fbff;
     outline: none;
+    font-size: 16px;
 }
 
 .setup-field input::placeholder {
@@ -424,6 +426,7 @@ textarea {
     width: 100%;
     height: calc(100dvh - 48px);
     overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .desktop::before {
@@ -3866,6 +3869,10 @@ body.dragging-window * {
     border: 1px solid rgba(125, 185, 255, 0.9);
     background: rgba(89, 151, 255, 0.18);
     pointer-events: none;
+}
+
+body.mobile-fit .desktop-selection-box {
+    display: none !important;
 }
 
 .shortcut-context-menu,

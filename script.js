@@ -1297,12 +1297,15 @@ function completeInitialSetup() {
     currentDesktopUserId = nextUserId;
     initialSetupComplete = true;
     storeDesktopUserId(currentDesktopUserId);
+    setupDesktopNameInput?.blur();
+    setupLimoreNameInput?.blur();
     persistLimoreAdminData({
         users: nextUsers
     });
     applyLimoreAdminData();
     sendClientHeartbeat();
     setupPanel?.setAttribute("aria-hidden", "true");
+    window.scrollTo(0, 0);
     dismissLockScreen();
 }
 

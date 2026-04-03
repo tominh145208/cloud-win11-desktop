@@ -764,6 +764,10 @@
             return;
         }
         desktop.addEventListener("pointerdown", (event) => {
+            if (event.pointerType && event.pointerType !== "mouse") {
+                desktopSelectionBoxEl.hidden = true;
+                return;
+            }
             if (event.target.closest(".shortcut, .app-window, .desktop-context-menu, .shortcut-context-menu")) {
                 return;
             }
