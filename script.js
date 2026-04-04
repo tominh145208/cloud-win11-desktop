@@ -367,16 +367,31 @@ function normalizeLimoreCloudGames(games) {
 function sanitizeLimoreCloudPackages(packages) {
     return (Array.isArray(packages) ? packages : []).map((pkg, index) => {
         const defaultPackage = defaultLimoreCloudPackages[index] || defaultLimoreCloudPackages[0];
+        const rawPrice = Number(pkg?.price ?? defaultPackage.price) || defaultPackage.price;
+        const resolvedId = String(pkg?.id || defaultPackage.id || "").trim() || defaultPackage.id;
+        const resolvedPrice = resolvedId === "starter" && Number(rawPrice) === 129000 ? 131000 : rawPrice;
         return {
             ...defaultPackage,
             ...pkg,
-            id: defaultPackage.id,
-            price: Number(pkg?.price ?? defaultPackage.price) || defaultPackage.price,
+            id: resolvedId,
+            price: resolvedPrice,
+            vnPriceLabel: formatLimorePackagePriceLabel(resolvedPrice),
             specs: Array.isArray(pkg?.specs)
                 ? pkg.specs.map((spec) => String(spec || "").trim()).filter(Boolean)
                 : cloneJson(defaultPackage.specs)
         };
     });
+}
+
+function formatLimorePackagePriceLabel(value) {
+    const numericValue = Math.max(0, Math.round(Number(value) || 0));
+    if (numericValue >= 1000000) {
+        return `${(numericValue / 1000000).toFixed(1).replace(".0", "")}m`;
+    }
+    if (numericValue >= 1000) {
+        return `${Math.round(numericValue / 1000)}k`;
+    }
+    return String(numericValue);
 }
 
 function sanitizeDesktopUsers(users) {
@@ -1091,8 +1106,8 @@ const defaultLimoreCloudPackages = [
         id: "starter",
         badge: "1 THANG",
         title: "Starter VN Cloud",
-        price: 129000,
-        vnPriceLabel: "129k",
+        price: 131000,
+        vnPriceLabel: "131k",
         globalPriceLabel: "$12.99",
         description: "Phu hop cho nguoi moi can choi game AAA, esports va stream on dinh moi ngay.",
         specs: [

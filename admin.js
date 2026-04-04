@@ -49,8 +49,8 @@ const defaultPackages = [
         id: "starter",
         badge: "1 THANG",
         title: "Starter VN Cloud",
-        price: 129000,
-        vnPriceLabel: "129k",
+        price: 131000,
+        vnPriceLabel: "131k",
         globalPriceLabel: "$12.99",
         description: "Phu hop cho nguoi moi can choi game AAA, esports va stream on dinh moi ngay.",
         specs: [
@@ -226,6 +226,36 @@ const clientFilters = {
     ip: "",
     user: ""
 };
+const ADMIN_EDIT_SYNC_COOLDOWN_MS = 12000;
+let adminEditCooldownUntil = 0;
+let hasUnsavedAdminChanges = false;
+
+function markAdminEditing() {
+    hasUnsavedAdminChanges = true;
+    adminEditCooldownUntil = Date.now() + ADMIN_EDIT_SYNC_COOLDOWN_MS;
+}
+
+function clearAdminEditing() {
+    hasUnsavedAdminChanges = false;
+    adminEditCooldownUntil = 0;
+}
+
+function isAdminEditingNow() {
+    if (hasUnsavedAdminChanges) {
+        return true;
+    }
+    if (Date.now() < adminEditCooldownUntil) {
+        return true;
+    }
+    const activeEl = document.activeElement;
+    if (!activeEl || !(activeEl instanceof HTMLElement)) {
+        return false;
+    }
+    if (!(activeEl.matches("input, textarea, select") || activeEl.isContentEditable)) {
+        return false;
+    }
+    return Boolean(activeEl.closest("#admin-shell"));
+}
 
 function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
@@ -300,6 +330,41 @@ function sanitizeRolloutConfig(rawConfig = {}, fallbackConfig = defaultState.rol
     };
 }
 
+function formatVnPriceLabel(value) {
+    const numericValue = Math.max(0, Math.round(Number(value) || 0));
+    if (numericValue >= 1000000) {
+        return `${(numericValue / 1000000).toFixed(1).replace(".0", "")}m`;
+    }
+    if (numericValue >= 1000) {
+        return `${Math.round(numericValue / 1000)}k`;
+    }
+    return String(numericValue);
+}
+
+function sanitizePackages(packages) {
+    const sourcePackages = Array.isArray(packages) && packages.length
+        ? packages
+        : defaultPackages;
+    return sourcePackages.map((pkg, index) => {
+        const fallbackPackage = defaultPackages[index] || defaultPackages[0];
+        const fallbackPrice = Math.max(0, Math.round(Number(fallbackPackage.price) || 0));
+        const rawPrice = Math.max(0, Math.round(Number(pkg?.price ?? fallbackPrice) || fallbackPrice));
+        const resolvedId = String(pkg?.id || fallbackPackage.id || "").trim() || fallbackPackage.id;
+        const resolvedPrice = resolvedId === "starter" && rawPrice === 129000 ? 131000 : rawPrice;
+        const resolvedSpecs = Array.isArray(pkg?.specs)
+            ? pkg.specs.map((spec) => String(spec || "").trim()).filter(Boolean)
+            : cloneJson(fallbackPackage.specs);
+        return {
+            ...fallbackPackage,
+            ...pkg,
+            id: resolvedId,
+            price: resolvedPrice,
+            vnPriceLabel: formatVnPriceLabel(resolvedPrice),
+            specs: resolvedSpecs
+        };
+    });
+}
+
 function getCurrentUser() {
     return adminData.users.find((user) => user.id === adminData.state.currentUserId) || adminData.users[0];
 }
@@ -317,7 +382,7 @@ function mergeAdminData(rawData = {}) {
         }];
     return {
         games: mergeGamesWithDefaults(rawData?.games, defaults.games),
-        packages: Array.isArray(rawData?.packages) && rawData.packages.length ? rawData.packages : defaults.packages,
+        packages: sanitizePackages(rawData?.packages),
         users: sanitizeUsers(nextUsers),
         clients: Array.isArray(rawData?.clients) ? rawData.clients : [],
         state: {
@@ -1093,8 +1158,8 @@ function renderPackagesForm() {
                 <input type="number" min="0" step="1000" data-field="price" value="${pkg.price}">
             </label>
             <label class="field">
-                <span>Gia hien thi VN</span>
-                <input type="text" data-field="vnPriceLabel" value="${pkg.vnPriceLabel}">
+                <span>Gia hien thi VN (tu dong theo gia goc)</span>
+                <input type="text" data-field="vnPriceLabel" value="${pkg.vnPriceLabel}" readonly>
             </label>
             <label class="field">
                 <span>Gia Global</span>
@@ -1491,8 +1556,12 @@ function syncPackagesForm() {
 
         targetPackage.badge = card.querySelector('[data-field="badge"]').value.trim();
         targetPackage.title = card.querySelector('[data-field="title"]').value.trim();
-        targetPackage.price = Number(card.querySelector('[data-field="price"]').value) || 0;
-        targetPackage.vnPriceLabel = card.querySelector('[data-field="vnPriceLabel"]').value.trim();
+        targetPackage.price = Math.max(0, Math.round(Number(card.querySelector('[data-field="price"]').value) || 0));
+        targetPackage.vnPriceLabel = formatVnPriceLabel(targetPackage.price);
+        const vnPriceLabelInput = card.querySelector('[data-field="vnPriceLabel"]');
+        if (vnPriceLabelInput) {
+            vnPriceLabelInput.value = targetPackage.vnPriceLabel;
+        }
         targetPackage.globalPriceLabel = card.querySelector('[data-field="globalPriceLabel"]').value.trim();
         targetPackage.description = card.querySelector('[data-field="description"]').value.trim();
         targetPackage.specs = card.querySelector('[data-field="specs"]').value
@@ -1557,6 +1626,7 @@ async function handleSaveAll() {
     adminData.state.setupComplete = adminData.users.length > 0;
     try {
         await saveAdminData();
+        clearAdminEditing();
         showStatus("Da luu du lieu Limore Cloud");
     } catch (error) {
         if (error.message === "admin_auth_required") {
@@ -1581,6 +1651,7 @@ async function handleResetDefaults() {
         showStatus("Khong reset duoc len server");
         return;
     }
+    clearAdminEditing();
     renderAll();
     showStatus("Da khoi phuc du lieu mac dinh");
 }
@@ -1602,6 +1673,7 @@ function handleAddGame() {
         image: buildSteamHeaderImage(appId),
         storeUrl: `https://store.steampowered.com/app/${appId}/`
     });
+    markAdminEditing();
     renderGamesTable();
     renderOverview();
 
@@ -1632,6 +1704,7 @@ function handleAddUser() {
         balance: 0,
         activePackageId: ""
     });
+    markAdminEditing();
     renderUsersTable();
     renderAccountForm();
 
@@ -2235,6 +2308,9 @@ async function loadAdminDashboard() {
 function startAdminLiveSync() {
     window.clearInterval(adminLiveSyncTimer);
     adminLiveSyncTimer = window.setInterval(async () => {
+        if (isAdminEditingNow()) {
+            return;
+        }
         try {
             await fetchAdminDataFromServer();
             await fetchClientRows();
@@ -2255,22 +2331,47 @@ function startAdminLiveSync() {
     }, 6000);
 }
 
-balanceInput.addEventListener("input", syncAccountForm);
-activePackageInput.addEventListener("change", syncAccountForm);
+balanceInput.addEventListener("input", () => {
+    markAdminEditing();
+    syncAccountForm();
+});
+activePackageInput.addEventListener("change", () => {
+    markAdminEditing();
+    syncAccountForm();
+});
 currentUserInput.addEventListener("change", handleCurrentUserChange);
-desktopNameInput.addEventListener("input", syncAccountForm);
-limoreNameInput.addEventListener("input", syncAccountForm);
-packagesForm.addEventListener("input", syncPackagesForm);
-packagesForm.addEventListener("change", syncPackagesForm);
-usersTableBody.addEventListener("input", syncUsersTable);
+desktopNameInput.addEventListener("input", () => {
+    markAdminEditing();
+    syncAccountForm();
+});
+limoreNameInput.addEventListener("input", () => {
+    markAdminEditing();
+    syncAccountForm();
+});
+packagesForm.addEventListener("input", () => {
+    markAdminEditing();
+    syncPackagesForm();
+});
+packagesForm.addEventListener("change", () => {
+    markAdminEditing();
+    syncPackagesForm();
+});
+usersTableBody.addEventListener("input", () => {
+    markAdminEditing();
+    syncUsersTable();
+});
 usersTableBody.addEventListener("change", (event) => {
+    markAdminEditing();
     const radio = event.target.closest('[data-action="set-current-user"]');
     if (radio) {
         adminData.state.currentUserId = radio.value;
     }
     syncUsersTable();
 });
-gamesTableBody.addEventListener("input", syncGamesTable);
+gamesTableBody.addEventListener("input", () => {
+    markAdminEditing();
+    syncGamesTable();
+});
 usersTableBody.addEventListener("click", (event) => {
     const deleteButton = event.target.closest('[data-action="delete-user"]');
     if (!deleteButton) {
@@ -2288,6 +2389,7 @@ usersTableBody.addEventListener("click", (event) => {
     if (!adminData.users.some((user) => user.id === adminData.state.currentUserId)) {
         adminData.state.currentUserId = adminData.users[0]?.id || defaultUsers[0].id;
     }
+    markAdminEditing();
     renderUsersTable();
     renderAccountForm();
     renderOverview();
@@ -2305,6 +2407,7 @@ gamesTableBody.addEventListener("click", (event) => {
     }
 
     adminData.games.splice(rowIndex, 1);
+    markAdminEditing();
     renderGamesTable();
     renderOverview();
 });
