@@ -992,6 +992,33 @@ const defaultLimoreCloudLibrary = [
     { appId: 304390, title: "For Honor", genre: "Action Fighting", release: "2017", sections: "games played settings" },
     { appId: 218230, title: "PlanetSide 2", genre: "Massive FPS", release: "2015", sections: "games played settings" },
     { appId: 391540, title: "Undertale", genre: "Indie RPG", release: "2015", sections: "games saves" },
+    {
+        appId: 900001,
+        title: "Garena PC",
+        genre: "Game Launcher",
+        release: "2009",
+        sections: "home games settings",
+        image: "https://upload.wikimedia.org/wikipedia/commons/8/8b/Logo_Garena.png",
+        storeUrl: "https://www.garena.vn/"
+    },
+    {
+        appId: 900002,
+        title: "Lien Minh Huyen Thoai (Riot)",
+        genre: "MOBA",
+        release: "2009",
+        sections: "home games played settings",
+        image: "https://upload.wikimedia.org/wikipedia/commons/f/f7/League_of_Legends.png",
+        storeUrl: "https://www.leagueoflegends.com/vi-vn/"
+    },
+    {
+        appId: 900003,
+        title: "Dau Truong Chan Ly (Riot)",
+        genre: "Auto Battler",
+        release: "2019",
+        sections: "home games played settings",
+        image: "https://upload.wikimedia.org/wikipedia/commons/f/f8/Teamfight_Tactics_logo.svg",
+        storeUrl: "https://teamfighttactics.leagueoflegends.com/vi-vn/"
+    },
     { appId: 271590, title: "GTA5 VN", genre: "Roleplay Community", release: "2015", sections: "home games played saves", storeUrl: "https://www.gta5vn.net/" }
 ];
 
