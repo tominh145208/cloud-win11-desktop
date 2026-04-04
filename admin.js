@@ -16,6 +16,7 @@ const ADMIN_ALERTS_API = "/api/admin-alerts";
 const ADMIN_DASHBOARD_API = "/api/admin-dashboard";
 const ADMIN_ROLLOUT_API = "/api/admin-rollout";
 const ADMIN_TOKEN_KEY = "win11_admin_session_token_v1";
+const ADMIN_ACTIVE_SECTION_KEY = "win11_admin_active_section_v1";
 
 const defaultGames = [
     { appId: 730, title: "Counter-Strike 2", genre: "FPS Tactical", release: "2012", sections: "home games played settings" },
@@ -200,14 +201,17 @@ const deviceDetailModal = document.getElementById("device-detail-modal");
 const closeDeviceDetailButton = document.getElementById("close-device-detail-button");
 const deviceDetailBody = document.getElementById("device-detail-body");
 const adminRealtimeNotifyContainer = document.getElementById("admin-realtime-notify-container");
+const adminContent = document.querySelector(".admin-content");
 const adminNavButtons = Array.from(document.querySelectorAll(".admin-nav-btn[data-admin-section-target]"));
 const adminSections = Array.from(document.querySelectorAll(".admin-section[data-admin-section]"));
+const adminHero = document.getElementById("admin-hero");
+const adminSectionIds = new Set(adminSections.map((section) => String(section.dataset.adminSection || "").trim()).filter(Boolean));
 
 let adminData = loadAdminData();
 let clientRows = [];
 let adminToken = "";
 let adminLiveSyncTimer = 0;
-let activeAdminSection = "overview";
+let activeAdminSection = loadStoredAdminSection();
 let adminRole = "mod";
 let adminUsername = "admin";
 let adminRoleUsers = [];
@@ -233,6 +237,27 @@ let hasUnsavedAdminChanges = false;
 function markAdminEditing() {
     hasUnsavedAdminChanges = true;
     adminEditCooldownUntil = Date.now() + ADMIN_EDIT_SYNC_COOLDOWN_MS;
+}
+
+function normalizeAdminSection(sectionId) {
+    const safeSection = String(sectionId || "").trim();
+    return adminSectionIds.has(safeSection) ? safeSection : "overview";
+}
+
+function loadStoredAdminSection() {
+    try {
+        return normalizeAdminSection(localStorage.getItem(ADMIN_ACTIVE_SECTION_KEY));
+    } catch (error) {
+        return "overview";
+    }
+}
+
+function storeActiveAdminSection(sectionId) {
+    try {
+        localStorage.setItem(ADMIN_ACTIVE_SECTION_KEY, normalizeAdminSection(sectionId));
+    } catch (error) {
+        // Ignore storage errors.
+    }
 }
 
 function clearAdminEditing() {
@@ -1511,17 +1536,35 @@ function renderAll() {
 }
 
 function renderAdminSections() {
+    const resolvedSection = normalizeAdminSection(activeAdminSection);
+    if (resolvedSection !== activeAdminSection) {
+        activeAdminSection = resolvedSection;
+    }
+
     adminNavButtons.forEach((button) => {
         button.classList.toggle("active", button.dataset.adminSectionTarget === activeAdminSection);
     });
     adminSections.forEach((section) => {
-        section.classList.toggle("active", section.dataset.adminSection === activeAdminSection);
+        const isActive = section.dataset.adminSection === activeAdminSection;
+        section.classList.toggle("active", isActive);
+        section.hidden = !isActive;
     });
+
+    if (adminHero) {
+        adminHero.hidden = activeAdminSection !== "overview";
+    }
 }
 
 function setActiveAdminSection(sectionId) {
-    activeAdminSection = sectionId || "overview";
+    activeAdminSection = normalizeAdminSection(sectionId);
+    storeActiveAdminSection(activeAdminSection);
     renderAdminSections();
+    if (adminContent) {
+        adminContent.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    }
 }
 
 function syncAccountForm() {
