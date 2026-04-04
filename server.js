@@ -1365,10 +1365,11 @@ const server = http.createServer(async (req, res) => {
                 const session = getAdminSession(req);
                 const incomingUsers = Array.isArray(payload?.users) ? payload.users : null;
                 const existingUsers = Array.isArray(existing?.users) ? existing.users : [];
+                const canEditUserBalances = Boolean(session);
                 const nextUsers = incomingUsers
                     ? incomingUsers.map((entry) => ({
                         ...entry,
-                        balance: session?.role === "super_admin"
+                        balance: canEditUserBalances
                             ? Number(entry?.balance || 0)
                             : Number(existingUsers.find((user) => String(user?.id || "") === String(entry?.id || ""))?.balance || 0)
                     }))

@@ -537,6 +537,23 @@ body {
     resize: vertical;
 }
 
+.field-subhint {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: rgba(210, 225, 244, 0.72);
+}
+
+.balance-cell {
+    display: grid;
+    gap: 6px;
+}
+
+.balance-preview {
+    font-size: 12px;
+    color: rgba(210, 225, 244, 0.72);
+}
+
 .notes {
     display: grid;
     gap: 10px;

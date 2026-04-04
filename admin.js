@@ -126,6 +126,7 @@ const defaultUsers = [
 ];
 
 const balanceInput = document.getElementById("balance-input");
+const balanceInputPreview = document.getElementById("balance-input-preview");
 const activePackageInput = document.getElementById("active-package-input");
 const currentUserInput = document.getElementById("current-user-input");
 const desktopNameInput = document.getElementById("desktop-name-input");
@@ -367,7 +368,7 @@ function applyRolePermissions() {
         adminRoleInput.value = adminRole;
     }
 
-    const canEditBalance = isSuperAdmin();
+    const canEditBalance = Boolean(adminToken);
     const balanceTargets = [
         balanceInput,
         ...Array.from(document.querySelectorAll('#users-table-body [data-field="balance"]'))
@@ -815,6 +816,44 @@ function formatBalance(value) {
     return `${numericValue}d`;
 }
 
+function formatBalanceInput(value) {
+    const numericValue = Number(value) || 0;
+    return String(Math.max(0, Math.round(numericValue)));
+}
+
+function parseBalanceInputValue(rawValue, fallbackValue = 0) {
+    const fallback = Math.max(0, Math.round(Number(fallbackValue) || 0));
+    const safeValue = String(rawValue ?? "").trim().toLowerCase().replace(/,/g, "").replace(/\s+/g, "");
+    if (!safeValue) {
+        return 0;
+    }
+
+    const match = safeValue.match(/^(-?\d+(?:\.\d+)?)([kmb])?$/i);
+    if (match) {
+        const baseValue = Number(match[1]);
+        if (!Number.isFinite(baseValue)) {
+            return fallback;
+        }
+        const unit = String(match[2] || "").toLowerCase();
+        const multiplier = unit === "k" ? 1000 : unit === "m" ? 1000000 : unit === "b" ? 1000000000 : 1;
+        return Math.max(0, Math.round(baseValue * multiplier));
+    }
+
+    const numericOnly = Number(safeValue.replace(/[^\d.-]/g, ""));
+    if (!Number.isFinite(numericOnly)) {
+        return fallback;
+    }
+    return Math.max(0, Math.round(numericOnly));
+}
+
+function refreshBalanceInputPreview() {
+    if (!balanceInputPreview || !balanceInput) {
+        return;
+    }
+    const parsedBalance = parseBalanceInputValue(balanceInput.value, 0);
+    balanceInputPreview.textContent = formatBalance(parsedBalance);
+}
+
 function showStatus(message) {
     adminStatus.textContent = message;
     adminStatus.classList.add("show");
@@ -1025,7 +1064,8 @@ function renderAccountForm() {
     currentUserInput.value = adminData.state.currentUserId || currentUser?.id || "";
     desktopNameInput.value = currentUser?.desktopName || "";
     limoreNameInput.value = currentUser?.limoreName || "";
-    balanceInput.value = String(currentUser?.balance || 0);
+    balanceInput.value = formatBalanceInput(currentUser?.balance || 0);
+    refreshBalanceInputPreview();
     activePackageInput.innerHTML = `
         <option value="">Chua co goi</option>
         ${adminData.packages.map((pkg) => `<option value="${pkg.id}">${pkg.title}</option>`).join("")}
@@ -1101,7 +1141,12 @@ function renderUsersTable() {
             <td><input type="text" data-field="id" value="${user.id}"></td>
             <td><input type="text" data-field="desktopName" value="${user.desktopName}"></td>
             <td><input type="text" data-field="limoreName" value="${user.limoreName}"></td>
-            <td><input type="number" min="0" step="1000" data-field="balance" value="${user.balance}"></td>
+            <td>
+                <div class="balance-cell">
+                    <input type="text" inputmode="decimal" data-field="balance" value="${formatBalanceInput(user.balance)}" placeholder="0 / 100k / 1m">
+                    <small class="balance-preview">${formatBalance(user.balance)}</small>
+                </div>
+            </td>
             <td>
                 <select data-field="activePackageId">
                     <option value="">Chua co goi</option>
@@ -1422,9 +1467,8 @@ function syncAccountForm() {
     }
     currentUser.desktopName = desktopNameInput.value.trim() || currentUser.desktopName;
     currentUser.limoreName = limoreNameInput.value.trim() || currentUser.limoreName;
-    if (isSuperAdmin()) {
-        currentUser.balance = Number(balanceInput.value) || 0;
-    }
+    currentUser.balance = parseBalanceInputValue(balanceInput.value, currentUser.balance);
+    refreshBalanceInputPreview();
     currentUser.activePackageId = activePackageInput.value || "";
     renderUsersTable();
     renderOverview();
@@ -1479,15 +1523,23 @@ function syncGamesTable() {
 
 function syncUsersTable() {
     const rows = usersTableBody.querySelectorAll("tr[data-index]");
-    adminData.users = Array.from(rows).map((row, index) => ({
-        id: row.querySelector('[data-field="id"]').value.trim() || `user${index + 1}`,
-        desktopName: row.querySelector('[data-field="desktopName"]').value.trim() || `User ${index + 1}`,
-        limoreName: row.querySelector('[data-field="limoreName"]').value.trim() || "Anonymous",
-        balance: isSuperAdmin()
-            ? (Number(row.querySelector('[data-field="balance"]').value) || 0)
-            : Number((adminData.users[index] || {}).balance || 0),
-        activePackageId: row.querySelector('[data-field="activePackageId"]').value || ""
-    }));
+    adminData.users = Array.from(rows).map((row, index) => {
+        const parsedBalance = parseBalanceInputValue(
+            row.querySelector('[data-field="balance"]').value,
+            Number((adminData.users[index] || {}).balance || 0)
+        );
+        const balancePreviewEl = row.querySelector(".balance-preview");
+        if (balancePreviewEl) {
+            balancePreviewEl.textContent = formatBalance(parsedBalance);
+        }
+        return {
+            id: row.querySelector('[data-field="id"]').value.trim() || `user${index + 1}`,
+            desktopName: row.querySelector('[data-field="desktopName"]').value.trim() || `User ${index + 1}`,
+            limoreName: row.querySelector('[data-field="limoreName"]').value.trim() || "Anonymous",
+            balance: parsedBalance,
+            activePackageId: row.querySelector('[data-field="activePackageId"]').value || ""
+        };
+    });
     adminData.users = sanitizeUsers(adminData.users);
     if (!adminData.users.some((user) => user.id === adminData.state.currentUserId)) {
         adminData.state.currentUserId = adminData.users[0]?.id || defaultUsers[0].id;
