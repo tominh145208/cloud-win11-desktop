@@ -345,19 +345,22 @@ function setActiveAdminSubtab(sectionId, targetId) {
     const nextTarget = validTargets.has(String(targetId || "").trim()) ? String(targetId || "").trim() : fallbackTarget;
     activeAdminSubtabs[safeSection] = nextTarget;
     storeActiveAdminSubtabs();
+    if (safeSection === "manage" && nextTarget === "manage-users") {
+        setActiveManageUsersTab("list");
+    }
     renderAdminSubtabs();
 }
 
 function normalizeManageUsersTab(tabId) {
     const safeTabId = String(tabId || "").trim();
-    return safeTabId === "list" ? "list" : "create";
+    return safeTabId === "create" ? "create" : "list";
 }
 
 function loadStoredManageUsersTab() {
     try {
         return normalizeManageUsersTab(localStorage.getItem(ADMIN_MANAGE_USERS_TAB_KEY));
     } catch (error) {
-        return "create";
+        return "list";
     }
 }
 
@@ -1348,6 +1351,15 @@ function renderGamesTable() {
 }
 
 function renderUsersTable() {
+    if (!Array.isArray(adminData.users) || !adminData.users.length) {
+        usersTableBody.innerHTML = `
+            <tr>
+                <td colspan="7">Chua co user nao. Bam tab "Them user" de tao moi.</td>
+            </tr>
+        `;
+        return;
+    }
+
     usersTableBody.innerHTML = adminData.users.map((user, index) => `
         <tr data-index="${index}">
             <td>
@@ -1878,6 +1890,7 @@ function handleAddUser() {
         activePackageId: ""
     });
     markAdminEditing();
+    setActiveManageUsersTab("list");
     renderUsersTable();
     renderAccountForm();
 
