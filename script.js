@@ -286,19 +286,80 @@ function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
 }
 
+function getCustomGameImageFallback(appId, title) {
+    const safeTitle = String(title || "").toLowerCase();
+    if (appId === 900001 || safeTitle.includes("garena")) {
+        return "https://upload.wikimedia.org/wikipedia/commons/8/8b/Logo_Garena.png";
+    }
+    if (appId === 900002 || safeTitle.includes("lien minh") || safeTitle.includes("league of legends")) {
+        return "https://upload.wikimedia.org/wikipedia/commons/f/f7/League_of_Legends.png";
+    }
+    if (appId === 900003 || safeTitle.includes("dau truong chan ly") || safeTitle.includes("teamfight tactics")) {
+        return "https://upload.wikimedia.org/wikipedia/commons/f/f8/Teamfight_Tactics_logo.svg";
+    }
+    return "";
+}
+
+function getCustomGameStoreFallback(appId, title) {
+    const safeTitle = String(title || "").toLowerCase();
+    if (appId === 900001 || safeTitle.includes("garena")) {
+        return "https://www.garena.vn/";
+    }
+    if (appId === 900002 || safeTitle.includes("lien minh") || safeTitle.includes("league of legends")) {
+        return "https://www.leagueoflegends.com/vi-vn/";
+    }
+    if (appId === 900003 || safeTitle.includes("dau truong chan ly") || safeTitle.includes("teamfight tactics")) {
+        return "https://teamfighttactics.leagueoflegends.com/vi-vn/";
+    }
+    return "";
+}
+
+function mergeGamesWithDefaults(rawGames, defaultGames) {
+    const nextGames = (Array.isArray(rawGames) && rawGames.length)
+        ? rawGames.map((game) => ({ ...game }))
+        : cloneJson(defaultGames);
+
+    const appIdSet = new Set(nextGames.map((game) => Number(game?.appId) || 0).filter((appId) => appId > 0));
+    const titleSet = new Set(nextGames.map((game) => String(game?.title || "").trim().toLowerCase()).filter(Boolean));
+
+    defaultGames.forEach((defaultGame) => {
+        const appId = Number(defaultGame?.appId) || 0;
+        const title = String(defaultGame?.title || "").trim();
+        const lowerTitle = title.toLowerCase();
+        const existsByAppId = appId > 0 && appIdSet.has(appId);
+        const existsByTitle = lowerTitle && titleSet.has(lowerTitle);
+        if (existsByAppId || existsByTitle) {
+            return;
+        }
+        nextGames.push({ ...defaultGame });
+        if (appId > 0) {
+            appIdSet.add(appId);
+        }
+        if (lowerTitle) {
+            titleSet.add(lowerTitle);
+        }
+    });
+
+    return nextGames;
+}
+
 function normalizeLimoreCloudGames(games) {
     return (Array.isArray(games) ? games : []).map((game, index) => {
         const appId = Number(game.appId) || 0;
+        const rawTitle = String(game.title || "Unknown Game");
+        const title = /teamfight tactics/i.test(rawTitle) ? "Dau Truong Chan Ly (Riot)" : rawTitle;
+        const customImage = getCustomGameImageFallback(appId, title);
+        const customStoreUrl = getCustomGameStoreFallback(appId, title);
         return {
             ...game,
             appId,
-            title: String(game.title || "Unknown Game"),
+            title,
             genre: String(game.genre || "Unknown Genre"),
             release: String(game.release || ""),
             sections: String(game.sections || "games"),
             rank: index + 1,
-            image: game.image || buildSteamHeaderImage(appId),
-            storeUrl: game.storeUrl || (appId ? `https://store.steampowered.com/app/${appId}/` : "#")
+            image: game.image || customImage || buildSteamHeaderImage(appId),
+            storeUrl: game.storeUrl || customStoreUrl || (appId ? `https://store.steampowered.com/app/${appId}/` : "#")
         };
     });
 }
@@ -627,7 +688,7 @@ function mergeLimoreAdminData(rawData = {}) {
         }];
 
     return {
-        games: Array.isArray(rawData?.games) && rawData.games.length ? rawData.games : defaults.games,
+        games: mergeGamesWithDefaults(rawData?.games, defaults.games),
         packages: Array.isArray(rawData?.packages) && rawData.packages.length ? rawData.packages : defaults.packages,
         users: nextUsers,
         clients: Array.isArray(rawData?.clients) ? rawData.clients : [],
@@ -762,7 +823,10 @@ function persistLimoreAdminData(partialData = {}) {
     } : (currentData.state || getDefaultLimoreAdminData().state);
 
     limoreAdminDataCache = {
-        games: Array.isArray(partialData.games) ? partialData.games : currentData.games,
+        games: mergeGamesWithDefaults(
+            Array.isArray(partialData.games) ? partialData.games : currentData.games,
+            getDefaultLimoreAdminData().games
+        ),
         packages: Array.isArray(partialData.packages) ? partialData.packages : currentData.packages,
         users: Array.isArray(partialData.users) ? partialData.users : currentData.users,
         clients: Array.isArray(partialData.clients) ? partialData.clients : currentData.clients,

@@ -38,7 +38,10 @@ const defaultGames = [
     { appId: 1144200, title: "Ready or Not", genre: "Tactical Breach FPS", release: "2023", sections: "games played settings" },
     { appId: 1086940, title: "Baldur's Gate 3", genre: "CRPG", release: "2023", sections: "home games saves" },
     { appId: 2358720, title: "Black Myth: Wukong", genre: "Action RPG", release: "2024", sections: "home games played saves" },
-    { appId: 1245620, title: "ELDEN RING", genre: "Action RPG", release: "2022", sections: "home games played saves" }
+    { appId: 1245620, title: "ELDEN RING", genre: "Action RPG", release: "2022", sections: "home games played saves" },
+    { appId: 900001, title: "Garena PC", genre: "Game Launcher", release: "2009", sections: "home games settings" },
+    { appId: 900002, title: "Lien Minh Huyen Thoai (Riot)", genre: "MOBA", release: "2009", sections: "home games played settings" },
+    { appId: 900003, title: "Dau Truong Chan Ly (Riot)", genre: "Auto Battler", release: "2019", sections: "home games played settings" }
 ];
 
 const defaultPackages = [
@@ -252,6 +255,34 @@ function sanitizeUsers(users) {
     return nextUsers.length ? nextUsers : cloneJson(defaultUsers);
 }
 
+function mergeGamesWithDefaults(rawGames, fallbackGames) {
+    const nextGames = (Array.isArray(rawGames) && rawGames.length)
+        ? rawGames.map((game) => ({ ...game }))
+        : cloneJson(fallbackGames);
+
+    const appIdSet = new Set(nextGames.map((game) => Number(game?.appId) || 0).filter((appId) => appId > 0));
+    const titleSet = new Set(nextGames.map((game) => String(game?.title || "").trim().toLowerCase()).filter(Boolean));
+
+    fallbackGames.forEach((defaultGame) => {
+        const appId = Number(defaultGame?.appId) || 0;
+        const title = String(defaultGame?.title || "").trim().toLowerCase();
+        const existsByAppId = appId > 0 && appIdSet.has(appId);
+        const existsByTitle = title && titleSet.has(title);
+        if (existsByAppId || existsByTitle) {
+            return;
+        }
+        nextGames.push({ ...defaultGame });
+        if (appId > 0) {
+            appIdSet.add(appId);
+        }
+        if (title) {
+            titleSet.add(title);
+        }
+    });
+
+    return nextGames;
+}
+
 function sanitizeRolloutConfig(rawConfig = {}, fallbackConfig = defaultState.rollout) {
     const percentRaw = Number(rawConfig?.percent ?? fallbackConfig.percent);
     const percent = Number.isFinite(percentRaw)
@@ -284,7 +315,7 @@ function mergeAdminData(rawData = {}) {
             activePackageId: legacyActivePackageId
         }];
     return {
-        games: Array.isArray(rawData?.games) && rawData.games.length ? rawData.games : defaults.games,
+        games: mergeGamesWithDefaults(rawData?.games, defaults.games),
         packages: Array.isArray(rawData?.packages) && rawData.packages.length ? rawData.packages : defaults.packages,
         users: sanitizeUsers(nextUsers),
         clients: Array.isArray(rawData?.clients) ? rawData.clients : [],
