@@ -91,7 +91,12 @@
                         <h2>Tong quan</h2>
                         <p>Xem nhanh so du, goi dang dung va tong so game.</p>
                     </div>
-                    <section class="admin-overview">
+                    <div class="admin-subtab-nav" data-admin-subnav>
+                        <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="overview-summary">Tong quan nhanh</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="overview-alerts">Canh bao IP</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="overview-rollout">Version rollout</button>
+                    </div>
+                    <section class="admin-overview" data-admin-subtab-panel="overview-summary">
                         <article class="overview-card">
                             <span>So du</span>
                             <strong id="overview-balance">0d</strong>
@@ -107,7 +112,7 @@
                     </section>
 
                     <section class="admin-grid">
-                        <article class="admin-panel">
+                        <article class="admin-panel" data-admin-subtab-panel="overview-summary">
                             <div class="panel-head">
                                 <h2>Dashboard online</h2>
                                 <p>Thong ke so lan client online theo gio va theo ngay.</p>
@@ -116,7 +121,7 @@
                                 <canvas id="online-chart-canvas" height="220"></canvas>
                             </div>
                         </article>
-                        <article class="admin-panel">
+                        <article class="admin-panel" data-admin-subtab-panel="overview-alerts" hidden>
                             <div class="panel-head">
                                 <h2>Canh bao IP la</h2>
                                 <p>Canh bao realtime khi user cu dang nhap bang IP moi.</p>
@@ -129,7 +134,7 @@
                                 <div id="alerts-list" class="simple-list"></div>
                             </div>
                         </article>
-                        <article class="admin-panel">
+                        <article class="admin-panel" data-admin-subtab-panel="overview-rollout" hidden>
                             <div class="panel-head">
                                 <h2>Version rollout</h2>
                                 <p>Cap phien ban moi theo % thiet bi de test an toan (10% -> 50% -> 100%).</p>
@@ -174,13 +179,14 @@
                         <h2>Quan ly</h2>
                         <p>Cac muc quan ly chinh cho user desktop, bao mat va danh sach user.</p>
                     </div>
-                    <div class="admin-mini-nav">
-                        <span class="admin-mini-chip">User hien tai</span>
-                        <span class="admin-mini-chip">Bao mat admin</span>
-                        <span class="admin-mini-chip">Danh sach user</span>
+                    <div class="admin-subtab-nav" data-admin-subnav>
+                        <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="manage-account">Tai khoan</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="manage-security">Bao mat</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="manage-permissions">Phan quyen</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="manage-users">Danh sach user</button>
                     </div>
                     <section class="admin-grid">
-                        <article class="admin-panel">
+                        <article class="admin-panel" data-admin-subtab-panel="manage-account">
                 <div class="panel-head">
                     <h2>Nguoi dung desktop</h2>
                     <p>Quan ly user dang dung tren desktop va Limore Cloud.</p>
@@ -210,7 +216,7 @@
                 </div>
                         </article>
 
-                        <article class="admin-panel">
+                        <article class="admin-panel" data-admin-subtab-panel="manage-security" hidden>
                 <div class="panel-head">
                     <h2>Bao mat admin</h2>
                     <p>Khoa admin bang mat khau va doi mat khau ngay trong trang nay.</p>
@@ -254,7 +260,7 @@
                         </article>
                     </section>
 
-                    <section class="admin-grid">
+                    <section class="admin-grid" data-admin-subtab-panel="manage-permissions" hidden>
                         <article class="admin-panel">
                             <div class="panel-head">
                                 <h2>Phan quyen admin</h2>
@@ -307,28 +313,34 @@
                         </article>
                     </section>
 
-                    <section class="admin-panel">
+                    <section class="admin-panel" data-admin-subtab-panel="manage-users" hidden>
             <div class="panel-head">
                 <h2>Danh sach user</h2>
                 <p>Them, xoa va chuyen user desktop dang hoat dong.</p>
             </div>
             <div class="panel-body">
-                <div class="game-form-grid user-form-grid">
-                    <label class="field">
-                        <span>User ID</span>
-                        <input id="new-user-id" type="text" placeholder="minh">
-                    </label>
-                    <label class="field">
-                        <span>Desktop name</span>
-                        <input id="new-user-desktop-name" type="text" placeholder="Dz Minh">
-                    </label>
-                    <label class="field">
-                        <span>Limore name</span>
-                        <input id="new-user-limore-name" type="text" placeholder="Anonymous">
-                    </label>
-                    <button id="add-user-button" type="button" class="admin-btn is-primary">Them user</button>
+                <div class="admin-subtab-nav" aria-label="User menu">
+                    <button type="button" class="admin-subtab-btn active" data-user-panel-target="create">Them user</button>
+                    <button type="button" class="admin-subtab-btn" data-user-panel-target="list">Danh sach user</button>
                 </div>
-                <div class="games-table-wrap">
+                <div data-user-panel="create">
+                    <div class="game-form-grid user-form-grid">
+                        <label class="field">
+                            <span>User ID</span>
+                            <input id="new-user-id" type="text" placeholder="minh">
+                        </label>
+                        <label class="field">
+                            <span>Desktop name</span>
+                            <input id="new-user-desktop-name" type="text" placeholder="Dz Minh">
+                        </label>
+                        <label class="field">
+                            <span>Limore name</span>
+                            <input id="new-user-limore-name" type="text" placeholder="Anonymous">
+                        </label>
+                        <button id="add-user-button" type="button" class="admin-btn is-primary">Them user</button>
+                    </div>
+                </div>
+                <div class="games-table-wrap" data-user-panel="list" hidden>
                     <table class="games-table">
                         <thead>
                             <tr>
@@ -353,12 +365,11 @@
                         <h2>Thiet bi</h2>
                         <p>Theo doi may desktop, mobile, trang thai online va ngat/mo lai client.</p>
                     </div>
-                    <div class="admin-mini-nav">
-                        <span class="admin-mini-chip">Client ben ngoai</span>
-                        <span class="admin-mini-chip">Online / Offline</span>
-                        <span class="admin-mini-chip">Quan ly moi Wi-Fi</span>
+                    <div class="admin-subtab-nav" data-admin-subnav>
+                        <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="clients-list">Danh sach thiet bi</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="clients-firewall">Tuong lua mini</button>
                     </div>
-                    <section class="admin-panel">
+                    <section class="admin-panel" data-admin-subtab-panel="clients-list">
             <div class="panel-head">
                 <h2>Client ben ngoai / mobile</h2>
                 <p>Danh sach trinh duyet, thiet bi va user an danh dang vao he thong.</p>
@@ -411,7 +422,7 @@
             </div>
                     </section>
 
-                    <section class="admin-panel">
+                    <section class="admin-panel" data-admin-subtab-panel="clients-firewall" hidden>
                         <div class="panel-head">
                             <h2>Tuong lua mini</h2>
                             <p>Chan theo IP, CIDR hoac range. Vi du: 1.2.3.4, 1.2.3.0/24, 1.2.3.4-1.2.3.30.</p>
@@ -434,7 +445,10 @@
                         <h2>Goi Cloud</h2>
                         <p>Sua gia, badge, mo ta va cau hinh goi cloud theo dang gon gang.</p>
                     </div>
-                    <section class="admin-panel">
+                    <div class="admin-subtab-nav" data-admin-subnav>
+                        <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="packages-editor">Cau hinh goi</button>
+                    </div>
+                    <section class="admin-panel" data-admin-subtab-panel="packages-editor">
             <div class="panel-head">
                 <h2>Goi Cloud</h2>
                 <p>Sua ten goi, gia, mo ta va cau hinh.</p>
@@ -448,12 +462,16 @@
                         <h2>Thu vien game</h2>
                         <p>Them, xoa va sua game trong Limore Cloud theo bang gon de thao tac nhanh.</p>
                     </div>
+                    <div class="admin-subtab-nav" data-admin-subnav>
+                        <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="games-add">Them game</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="games-list">Danh sach game</button>
+                    </div>
                     <section class="admin-panel">
             <div class="panel-head">
                 <h2>Thu vien game</h2>
                 <p>Them, xoa va sua danh sach game hien trong Limore Cloud.</p>
             </div>
-            <div class="panel-body">
+            <div class="panel-body" data-admin-subtab-panel="games-add">
                 <div class="game-form-grid">
                     <label class="field">
                         <span>Steam App ID</span>
@@ -477,7 +495,9 @@
                     </label>
                     <button id="add-game-button" type="button" class="admin-btn is-primary">Them game</button>
                 </div>
+            </div>
 
+            <div class="panel-body" data-admin-subtab-panel="games-list" hidden>
                 <div class="games-table-wrap">
                     <table class="games-table">
                         <thead>

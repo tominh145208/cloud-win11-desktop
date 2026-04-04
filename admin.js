@@ -17,6 +17,8 @@ const ADMIN_DASHBOARD_API = "/api/admin-dashboard";
 const ADMIN_ROLLOUT_API = "/api/admin-rollout";
 const ADMIN_TOKEN_KEY = "win11_admin_session_token_v1";
 const ADMIN_ACTIVE_SECTION_KEY = "win11_admin_active_section_v1";
+const ADMIN_ACTIVE_SUBTABS_KEY = "win11_admin_active_subtabs_v1";
+const ADMIN_MANAGE_USERS_TAB_KEY = "win11_admin_manage_users_tab_v1";
 
 const defaultGames = [
     { appId: 730, title: "Counter-Strike 2", genre: "FPS Tactical", release: "2012", sections: "home games played settings" },
@@ -206,12 +208,16 @@ const adminNavButtons = Array.from(document.querySelectorAll(".admin-nav-btn[dat
 const adminSections = Array.from(document.querySelectorAll(".admin-section[data-admin-section]"));
 const adminHero = document.getElementById("admin-hero");
 const adminSectionIds = new Set(adminSections.map((section) => String(section.dataset.adminSection || "").trim()).filter(Boolean));
+const manageUsersTabButtons = Array.from(document.querySelectorAll(".admin-subtab-btn[data-user-panel-target]"));
+const manageUsersPanels = Array.from(document.querySelectorAll("[data-user-panel]"));
 
 let adminData = loadAdminData();
 let clientRows = [];
 let adminToken = "";
 let adminLiveSyncTimer = 0;
 let activeAdminSection = loadStoredAdminSection();
+let activeAdminSubtabs = loadStoredAdminSubtabs();
+let activeManageUsersTab = loadStoredManageUsersTab();
 let adminRole = "mod";
 let adminUsername = "admin";
 let adminRoleUsers = [];
@@ -258,6 +264,128 @@ function storeActiveAdminSection(sectionId) {
     } catch (error) {
         // Ignore storage errors.
     }
+}
+
+function normalizeAdminSubtabs(rawSubtabs = {}) {
+    const nextState = {};
+    adminSections.forEach((section) => {
+        const sectionId = String(section.dataset.adminSection || "").trim();
+        if (!sectionId) {
+            return;
+        }
+        const buttons = Array.from(section.querySelectorAll(".admin-subtab-btn[data-admin-subtab-target]"));
+        if (!buttons.length) {
+            return;
+        }
+        const validTargets = new Set(buttons.map((button) => String(button.dataset.adminSubtabTarget || "").trim()).filter(Boolean));
+        const firstTarget = String(buttons[0].dataset.adminSubtabTarget || "").trim();
+        const rawTarget = String(rawSubtabs?.[sectionId] || "").trim();
+        nextState[sectionId] = validTargets.has(rawTarget) ? rawTarget : firstTarget;
+    });
+    return nextState;
+}
+
+function loadStoredAdminSubtabs() {
+    try {
+        const raw = localStorage.getItem(ADMIN_ACTIVE_SUBTABS_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return normalizeAdminSubtabs(parsed && typeof parsed === "object" ? parsed : {});
+    } catch (error) {
+        return normalizeAdminSubtabs({});
+    }
+}
+
+function storeActiveAdminSubtabs() {
+    try {
+        localStorage.setItem(ADMIN_ACTIVE_SUBTABS_KEY, JSON.stringify(normalizeAdminSubtabs(activeAdminSubtabs)));
+    } catch (error) {
+        // Ignore storage errors.
+    }
+}
+
+function renderAdminSubtabs() {
+    activeAdminSubtabs = normalizeAdminSubtabs(activeAdminSubtabs);
+    adminSections.forEach((section) => {
+        const sectionId = String(section.dataset.adminSection || "").trim();
+        if (!sectionId) {
+            return;
+        }
+        const buttons = Array.from(section.querySelectorAll(".admin-subtab-btn[data-admin-subtab-target]"));
+        const panels = Array.from(section.querySelectorAll("[data-admin-subtab-panel]"));
+        if (!buttons.length || !panels.length) {
+            return;
+        }
+
+        const activeTarget = activeAdminSubtabs[sectionId] || String(buttons[0].dataset.adminSubtabTarget || "").trim();
+        buttons.forEach((button) => {
+            button.classList.toggle("active", String(button.dataset.adminSubtabTarget || "").trim() === activeTarget);
+        });
+        panels.forEach((panel) => {
+            const panelTarget = String(panel.dataset.adminSubtabPanel || "").trim();
+            panel.hidden = panelTarget !== activeTarget;
+        });
+    });
+}
+
+function setActiveAdminSubtab(sectionId, targetId) {
+    const safeSection = String(sectionId || "").trim();
+    if (!safeSection) {
+        return;
+    }
+    const sectionEl = adminSections.find((section) => String(section.dataset.adminSection || "").trim() === safeSection);
+    if (!sectionEl) {
+        return;
+    }
+    const buttons = Array.from(sectionEl.querySelectorAll(".admin-subtab-btn[data-admin-subtab-target]"));
+    if (!buttons.length) {
+        return;
+    }
+    const validTargets = new Set(buttons.map((button) => String(button.dataset.adminSubtabTarget || "").trim()).filter(Boolean));
+    const fallbackTarget = String(buttons[0].dataset.adminSubtabTarget || "").trim();
+    const nextTarget = validTargets.has(String(targetId || "").trim()) ? String(targetId || "").trim() : fallbackTarget;
+    activeAdminSubtabs[safeSection] = nextTarget;
+    storeActiveAdminSubtabs();
+    renderAdminSubtabs();
+}
+
+function normalizeManageUsersTab(tabId) {
+    const safeTabId = String(tabId || "").trim();
+    return safeTabId === "list" ? "list" : "create";
+}
+
+function loadStoredManageUsersTab() {
+    try {
+        return normalizeManageUsersTab(localStorage.getItem(ADMIN_MANAGE_USERS_TAB_KEY));
+    } catch (error) {
+        return "create";
+    }
+}
+
+function storeManageUsersTab(tabId) {
+    try {
+        localStorage.setItem(ADMIN_MANAGE_USERS_TAB_KEY, normalizeManageUsersTab(tabId));
+    } catch (error) {
+        // Ignore storage errors.
+    }
+}
+
+function renderManageUsersTabs() {
+    const normalizedTab = normalizeManageUsersTab(activeManageUsersTab);
+    if (normalizedTab !== activeManageUsersTab) {
+        activeManageUsersTab = normalizedTab;
+    }
+    manageUsersTabButtons.forEach((button) => {
+        button.classList.toggle("active", String(button.dataset.userPanelTarget || "").trim() === activeManageUsersTab);
+    });
+    manageUsersPanels.forEach((panel) => {
+        panel.hidden = String(panel.dataset.userPanel || "").trim() !== activeManageUsersTab;
+    });
+}
+
+function setActiveManageUsersTab(tabId) {
+    activeManageUsersTab = normalizeManageUsersTab(tabId);
+    storeManageUsersTab(activeManageUsersTab);
+    renderManageUsersTabs();
 }
 
 function clearAdminEditing() {
@@ -1532,6 +1660,7 @@ function renderAll() {
     renderDashboardChart();
     renderGamesTable();
     renderAdminSections();
+    renderManageUsersTabs();
     applyRolePermissions();
 }
 
@@ -1553,6 +1682,7 @@ function renderAdminSections() {
     if (adminHero) {
         adminHero.hidden = activeAdminSection !== "overview";
     }
+    renderAdminSubtabs();
 }
 
 function setActiveAdminSection(sectionId) {
@@ -2459,6 +2589,26 @@ adminNavButtons.forEach((button) => {
     button.addEventListener("click", () => {
         setActiveAdminSection(button.dataset.adminSectionTarget || "overview");
     });
+});
+
+document.addEventListener("click", (event) => {
+    const subtabButton = event.target.closest(".admin-subtab-btn[data-admin-subtab-target]");
+    if (!subtabButton) {
+        return;
+    }
+    const sectionEl = subtabButton.closest(".admin-section[data-admin-section]");
+    if (!sectionEl) {
+        return;
+    }
+    setActiveAdminSubtab(sectionEl.dataset.adminSection, subtabButton.dataset.adminSubtabTarget);
+});
+
+document.addEventListener("click", (event) => {
+    const usersTabButton = event.target.closest(".admin-subtab-btn[data-user-panel-target]");
+    if (!usersTabButton) {
+        return;
+    }
+    setActiveManageUsersTab(usersTabButton.dataset.userPanelTarget);
 });
 
 saveAllButton.addEventListener("click", handleSaveAll);
