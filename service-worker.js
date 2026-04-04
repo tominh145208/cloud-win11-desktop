@@ -1,4 +1,4 @@
-const CACHE_NAME = "limore-cloud-shell-v2";
+const CACHE_NAME = "limore-cloud-shell-v3";
 const SHELL_FILES = [
     "/",
     "/index.html",
@@ -49,9 +49,23 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    if (request.mode === "navigate") {
+    const isHotAsset =
+        requestUrl.pathname.endsWith(".js")
+        || requestUrl.pathname.endsWith(".css")
+        || requestUrl.pathname.endsWith(".html")
+        || requestUrl.pathname === "/";
+
+    if (request.mode === "navigate" || isHotAsset) {
         event.respondWith(
-            fetch(request).catch(() => caches.match("/index.html"))
+            fetch(request, { cache: "no-store" })
+                .then((response) => {
+                    if (response && response.status === 200) {
+                        const cloned = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(request).then((cached) => cached || caches.match("/index.html")))
         );
         return;
     }
