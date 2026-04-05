@@ -327,6 +327,20 @@ body {
     color: #ffd3d3;
 }
 
+.admin-quick-save {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.admin-btn.is-confirm {
+    border-color: rgba(255, 197, 120, 0.36);
+    background: rgba(255, 166, 64, 0.18);
+    color: #ffd9a6;
+}
+
 .panel-inline-actions {
     display: flex;
     flex-wrap: wrap;
@@ -352,6 +366,12 @@ body {
     grid-template-columns: repeat(4, minmax(0, 1fr)) repeat(3, auto);
     gap: 12px;
     align-items: end;
+}
+
+.admin-user-filters {
+    margin-top: 14px;
+    margin-bottom: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
 }
 
 .simple-list {
@@ -589,6 +609,53 @@ body {
 .balance-cell {
     display: grid;
     gap: 6px;
+}
+
+.balance-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.balance-quick-btn {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(64, 120, 190, 0.18);
+    color: #e6f3ff;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.balance-quick-btn:hover {
+    background: rgba(82, 152, 226, 0.32);
+}
+
+.user-lock-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 70px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(228, 236, 248, 0.8);
+}
+
+.user-lock-pill.is-locked {
+    border-color: rgba(255, 120, 120, 0.28);
+    background: rgba(255, 80, 80, 0.16);
+    color: #ffc7c7;
+}
+
+.table-delete-btn.is-confirm {
+    border-color: rgba(255, 197, 120, 0.36);
+    background: rgba(255, 166, 64, 0.18);
+    color: #ffd9a6;
 }
 
 .balance-preview {
@@ -910,6 +977,10 @@ body {
         grid-template-columns: 1fr 1fr;
     }
 
+    .admin-user-filters {
+        grid-template-columns: 1fr 1fr;
+    }
+
     .game-form-grid .admin-btn {
         width: 100%;
     }
@@ -947,6 +1018,10 @@ body {
     }
 
     .admin-filter-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-user-filters {
         grid-template-columns: 1fr;
     }
 

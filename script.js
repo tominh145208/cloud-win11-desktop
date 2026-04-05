@@ -270,6 +270,7 @@ const limoreCloudSections = {
 
 const STEAM_ASSET_BASE_URL = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps";
 const LIMORE_ADMIN_DATA_KEY = "win11_limore_admin_data_v1";
+const LIMORE_SYNC_SIGNAL_KEY = "win11_limore_sync_signal_v1";
 const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
 const LIMORE_CLIENTS_API = "/api/limore-clients";
 const LIMORE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
@@ -400,7 +401,8 @@ function sanitizeDesktopUsers(users) {
         desktopName: String(user?.desktopName || user?.name || `User ${index + 1}`).trim() || `User ${index + 1}`,
         limoreName: String(user?.limoreName || "Anonymous").trim() || "Anonymous",
         balance: Number(user?.balance) || 0,
-        activePackageId: String(user?.activePackageId || "")
+        activePackageId: String(user?.activePackageId || ""),
+        locked: Boolean(user?.locked)
     })).filter((user, index, array) => array.findIndex((item) => item.id === user.id) === index);
 
     return safeUsers.length ? safeUsers : cloneJson(defaultDesktopUsers);
@@ -412,7 +414,8 @@ function getPendingDesktopUser() {
         desktopName: "",
         limoreName: "Anonymous",
         balance: 0,
-        activePackageId: ""
+        activePackageId: "",
+        locked: false
     };
 }
 
@@ -422,6 +425,30 @@ function getStoredDesktopUserId() {
     } catch (error) {
         return "";
     }
+}
+
+function getStoredSyncSignal() {
+    try {
+        return String(localStorage.getItem(LIMORE_SYNC_SIGNAL_KEY) || "").trim();
+    } catch (error) {
+        return "";
+    }
+}
+
+function storeSyncSignal(signal) {
+    try {
+        if (!signal) {
+            localStorage.removeItem(LIMORE_SYNC_SIGNAL_KEY);
+            return;
+        }
+        localStorage.setItem(LIMORE_SYNC_SIGNAL_KEY, String(signal));
+    } catch (error) {
+        // Ignore storage failures.
+    }
+}
+
+function isCurrentUserLocked() {
+    return Boolean(limoreCloudState.userLocked);
 }
 
 function storeDesktopUserId(userId) {
@@ -679,6 +706,7 @@ function getDefaultLimoreAdminData() {
             currentUserId: defaultDesktopUsers[0].id,
             setupComplete: false,
             blockedClientIds: [],
+            syncSignal: "",
             rollout: {
                 enabled: false,
                 percent: 100,
@@ -713,6 +741,7 @@ function mergeLimoreAdminData(rawData = {}) {
             blockedClientIds: Array.isArray(rawData?.state?.blockedClientIds)
                 ? rawData.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
                 : [],
+            syncSignal: String(rawData?.state?.syncSignal || defaults.state.syncSignal || ""),
             rollout: sanitizeRolloutConfig(rawData?.state?.rollout, defaults.state.rollout)
         }
     };
@@ -749,6 +778,9 @@ async function fetchLimoreAdminDataFromServer() {
             throw new Error("Could not load admin data");
         }
         const payload = await response.json();
+        const nextSyncSignal = String(payload?.syncSignal || "");
+        const prevSyncSignal = getStoredSyncSignal();
+        const syncSignalChanged = nextSyncSignal && nextSyncSignal !== prevSyncSignal;
         const rolloutConfig = sanitizeRolloutConfig(
             payload?.rollout,
             (payload?.data || {}).state?.rollout || getDefaultLimoreAdminData().state.rollout
@@ -758,6 +790,7 @@ async function fetchLimoreAdminDataFromServer() {
             state: {
                 ...((payload?.data || {}).state || {}),
                 rememberedCurrentUserId: String(payload?.rememberedCurrentUserId || ""),
+                syncSignal: nextSyncSignal,
                 rollout: rolloutConfig
             }
         });
@@ -765,10 +798,16 @@ async function fetchLimoreAdminDataFromServer() {
             resolveRolloutAssignment(rolloutConfig, getOrCreateClientId(), getRolloutFallbackSeed()),
             { persist: true, reloadIfChanged: true }
         );
+        if (syncSignalChanged) {
+            storeSyncSignal(nextSyncSignal);
+        }
         try {
             localStorage.setItem(LIMORE_ADMIN_DATA_KEY, JSON.stringify(limoreAdminDataCache));
         } catch (error) {
             // Ignore storage failures.
+        }
+        if (syncSignalChanged) {
+            refreshOpenLimoreCloudWindow();
         }
         return limoreAdminDataCache;
     } catch (error) {
@@ -815,7 +854,8 @@ function getLimoreVisualSignature(data = loadLimoreAdminData()) {
         state: {
             currentUserId: String(mergedData.state?.currentUserId || ""),
             setupComplete: Boolean(mergedData.state?.setupComplete),
-            blockedClientIds: Array.isArray(mergedData.state?.blockedClientIds) ? mergedData.state.blockedClientIds : []
+            blockedClientIds: Array.isArray(mergedData.state?.blockedClientIds) ? mergedData.state.blockedClientIds : [],
+            syncSignal: String(mergedData.state?.syncSignal || "")
         }
     });
 }
@@ -831,6 +871,7 @@ function persistLimoreAdminData(partialData = {}) {
         blockedClientIds: Array.isArray(partialData.state.blockedClientIds)
             ? partialData.state.blockedClientIds.map((value) => String(value || "").trim()).filter(Boolean)
             : (Array.isArray(currentData.state?.blockedClientIds) ? currentData.state.blockedClientIds : []),
+        syncSignal: String(partialData.state.syncSignal || currentData.state?.syncSignal || ""),
         rollout: sanitizeRolloutConfig(
             partialData.state.rollout,
             currentData.state?.rollout || getDefaultLimoreAdminData().state.rollout
@@ -895,6 +936,7 @@ function applyLimoreAdminData(data = loadLimoreAdminData()) {
     const currentUser = getCurrentDesktopUser();
     limoreCloudState.balance = Number(currentUser.balance) || 0;
     limoreCloudState.activePackageId = String(currentUser.activePackageId || "");
+    limoreCloudState.userLocked = Boolean(currentUser.locked);
     syncDesktopUserUi();
     syncClientBlockScreen();
 }
@@ -1161,13 +1203,15 @@ const defaultDesktopUsers = [
         desktopName: "Dz Minh",
         limoreName: "Anonymous",
         balance: 0,
-        activePackageId: ""
+        activePackageId: "",
+        locked: false
     }
 ];
 
 const limoreCloudState = {
     balance: 0,
-    activePackageId: ""
+    activePackageId: "",
+    userLocked: false
 };
 
 let limoreCloudLibrary = [];
@@ -2794,8 +2838,9 @@ function refreshLimorePackages(windowEl) {
 
         card.classList.toggle("is-owned", isOwned);
         if (buyButton) {
-            buyButton.disabled = isOwned;
-            buyButton.textContent = isOwned ? "Da so huu" : "Mua goi";
+            const isLocked = isCurrentUserLocked();
+            buyButton.disabled = isOwned || isLocked;
+            buyButton.textContent = isOwned ? "Da so huu" : (isLocked ? "Dang khoa" : "Mua goi");
         }
     });
 }
@@ -2903,6 +2948,16 @@ function wireLimoreCloudWindow(windowEl) {
                 return;
             }
 
+            if (isCurrentUserLocked()) {
+                showLimoreDialog(windowEl, {
+                    title: "Tai khoan dang bi khoa",
+                    message: "Tai khoan tam thoi bi khoa nen khong the mua goi hoac nap tien.",
+                    confirmText: "Dong",
+                    tone: "error"
+                });
+                return;
+            }
+
             const packageName = card.querySelector("h3")?.textContent?.trim() || "Goi Cloud";
             const packagePrice = Number(card.dataset.packagePrice || 0);
             const packageId = card.dataset.packageId || "";
@@ -2955,6 +3010,15 @@ function wireLimoreCloudWindow(windowEl) {
 
     topupToggles.forEach((toggle) => {
         toggle.addEventListener("click", () => {
+            if (isCurrentUserLocked()) {
+                showLimoreDialog(windowEl, {
+                    title: "Tai khoan dang bi khoa",
+                    message: "Tai khoan tam thoi bi khoa nen khong the nap tien.",
+                    confirmText: "Dong",
+                    tone: "error"
+                });
+                return;
+            }
             const parent = toggle.closest(".limore-topup-item");
             const content = parent?.querySelector(".limore-topup-content");
             const isExpanded = toggle.getAttribute("aria-expanded") === "true";

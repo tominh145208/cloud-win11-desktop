@@ -15,6 +15,10 @@ const ADMIN_DEVICE_DETAIL_API = "/api/admin-devices/detail";
 const ADMIN_ALERTS_API = "/api/admin-alerts";
 const ADMIN_DASHBOARD_API = "/api/admin-dashboard";
 const ADMIN_ROLLOUT_API = "/api/admin-rollout";
+const ADMIN_SYNC_API = "/api/admin-sync";
+const ADMIN_DEPLOY_STATUS_API = "/api/admin-deploy-status";
+const ADMIN_DATA_EXPORT_API = "/api/admin-data/export";
+const ADMIN_DATA_IMPORT_API = "/api/admin-data/import";
 const ADMIN_TOKEN_KEY = "win11_admin_session_token_v1";
 const ADMIN_ACTIVE_SECTION_KEY = "win11_admin_active_section_v1";
 const ADMIN_ACTIVE_SUBTABS_KEY = "win11_admin_active_subtabs_v1";
@@ -109,6 +113,13 @@ const defaultState = {
     ipAlerts: [],
     clientHistory: [],
     knownIpsByUser: {},
+    syncSignal: "",
+    deployStatus: {
+        state: "success",
+        updatedAt: "",
+        note: "",
+        source: "server"
+    },
     rollout: {
         enabled: false,
         percent: 100,
@@ -124,7 +135,8 @@ const defaultUsers = [
         desktopName: "Dz Minh",
         limoreName: "Anonymous",
         balance: 0,
-        activePackageId: ""
+        activePackageId: "",
+        locked: false
     }
 ];
 
@@ -150,6 +162,18 @@ const newGameSectionsInput = document.getElementById("new-game-sections");
 const newUserIdInput = document.getElementById("new-user-id");
 const newUserDesktopNameInput = document.getElementById("new-user-desktop-name");
 const newUserLimoreNameInput = document.getElementById("new-user-limore-name");
+const quickSaveAccountButton = document.getElementById("quick-save-account-button");
+const quickSaveUsersButton = document.getElementById("quick-save-users-button");
+const quickSavePackagesButton = document.getElementById("quick-save-packages-button");
+const quickSaveGamesButton = document.getElementById("quick-save-games-button");
+const syncAllClientsButton = document.getElementById("sync-all-clients-button");
+const userSearchInput = document.getElementById("user-search-input");
+const userFilterBalance = document.getElementById("user-filter-balance");
+const userFilterPackage = document.getElementById("user-filter-package");
+const userFilterResetButton = document.getElementById("user-filter-reset-button");
+const exportAdminJsonButton = document.getElementById("export-admin-json-button");
+const importAdminJsonButton = document.getElementById("import-admin-json-button");
+const importAdminJsonInput = document.getElementById("import-admin-json-input");
 const overviewBalance = document.getElementById("overview-balance");
 const overviewPackage = document.getElementById("overview-package");
 const overviewGames = document.getElementById("overview-games");
@@ -196,6 +220,10 @@ const rolloutLatestVersionInput = document.getElementById("rollout-latest-versio
 const rolloutQuickPercentButtons = Array.from(document.querySelectorAll("[data-rollout-percent]"));
 const saveRolloutButton = document.getElementById("save-rollout-button");
 const rolloutPreviewCopy = document.getElementById("rollout-preview-copy");
+const deployStatusStateInput = document.getElementById("deploy-status-state-input");
+const deployStatusNoteInput = document.getElementById("deploy-status-note-input");
+const saveDeployStatusButton = document.getElementById("save-deploy-status-button");
+const deployStatusTimestamp = document.getElementById("deploy-status-timestamp");
 const firewallRuleInput = document.getElementById("firewall-rule-input");
 const addFirewallRuleButton = document.getElementById("add-firewall-rule-button");
 const firewallRulesList = document.getElementById("firewall-rules-list");
@@ -225,6 +253,10 @@ let adminAuditLogs = [];
 let adminAlerts = [];
 let adminFirewallRules = [];
 let dashboardStats = { hourly: [], daily: [] };
+let concurrentLogins = [];
+let deployStatusState = { state: "success", updatedAt: "", note: "", source: "server" };
+let lastSavedAdminSnapshot = null;
+const pendingConfirmActions = new Map();
 let hasHydratedClientPresence = false;
 const knownClientPresence = new Map();
 let realtimeAudioContext = null;
@@ -235,6 +267,11 @@ const clientFilters = {
     device: "all",
     ip: "",
     user: ""
+};
+const userFilters = {
+    search: "",
+    balance: "all",
+    package: "all"
 };
 const ADMIN_EDIT_SYNC_COOLDOWN_MS = 12000;
 let adminEditCooldownUntil = 0;
@@ -417,6 +454,42 @@ function cloneJson(value) {
     return JSON.parse(JSON.stringify(value));
 }
 
+function setLastSavedSnapshot(nextData) {
+    lastSavedAdminSnapshot = cloneJson(nextData || adminData);
+}
+
+function getLargeBalanceChanges(threshold = 100000) {
+    if (!lastSavedAdminSnapshot || !Array.isArray(lastSavedAdminSnapshot.users)) {
+        return [];
+    }
+    const prevMap = new Map(lastSavedAdminSnapshot.users.map((user) => [String(user.id || ""), Number(user.balance) || 0]));
+    return adminData.users
+        .map((user) => {
+            const id = String(user.id || "");
+            const prevBalance = prevMap.has(id) ? prevMap.get(id) : 0;
+            const nextBalance = Number(user.balance) || 0;
+            return {
+                id,
+                prevBalance,
+                nextBalance,
+                delta: Math.abs(nextBalance - prevBalance)
+            };
+        })
+        .filter((change) => change.delta >= threshold);
+}
+
+function shouldConfirmAction(key, message, ttlMs = 4500) {
+    const now = Date.now();
+    const pending = pendingConfirmActions.get(key);
+    if (pending && now - pending.at <= ttlMs) {
+        pendingConfirmActions.delete(key);
+        return false;
+    }
+    pendingConfirmActions.set(key, { at: now });
+    showStatus(message);
+    return true;
+}
+
 function buildSteamHeaderImage(appId) {
     return `${STEAM_ASSET_BASE_URL}/${appId}/header.jpg`;
 }
@@ -436,7 +509,8 @@ function sanitizeUsers(users) {
         desktopName: String(user?.desktopName || `User ${index + 1}`).trim() || `User ${index + 1}`,
         limoreName: String(user?.limoreName || "Anonymous").trim() || "Anonymous",
         balance: Number(user?.balance) || 0,
-        activePackageId: String(user?.activePackageId || "")
+        activePackageId: String(user?.activePackageId || ""),
+        locked: Boolean(user?.locked)
     })).filter((user, index, array) => array.findIndex((item) => item.id === user.id) === index);
 
     return nextUsers.length ? nextUsers : cloneJson(defaultUsers);
@@ -555,6 +629,10 @@ function mergeAdminData(rawData = {}) {
             knownIpsByUser: rawData?.state?.knownIpsByUser && typeof rawData.state.knownIpsByUser === "object"
                 ? rawData.state.knownIpsByUser
                 : {},
+            syncSignal: String(rawData?.state?.syncSignal || ""),
+            deployStatus: rawData?.state?.deployStatus && typeof rawData.state.deployStatus === "object"
+                ? rawData.state.deployStatus
+                : cloneJson(defaults.state.deployStatus),
             rollout: sanitizeRolloutConfig(rawData?.state?.rollout, defaults.state.rollout)
         }
     };
@@ -639,6 +717,17 @@ function applyRolePermissions() {
             button.setAttribute("disabled", "");
         }
     });
+
+    [deployStatusStateInput, deployStatusNoteInput, saveDeployStatusButton].forEach((input) => {
+        if (!input) {
+            return;
+        }
+        if (isSuperAdmin()) {
+            input.removeAttribute("disabled");
+        } else {
+            input.setAttribute("disabled", "");
+        }
+    });
 }
 
 function setAdminLockedState(message = "") {
@@ -681,6 +770,7 @@ async function fetchAdminDataFromServer() {
         }
         const payload = await response.json();
         adminData = mergeAdminData(payload?.data || {});
+        setLastSavedSnapshot(adminData);
     } catch (error) {
         adminData = loadAdminData();
     }
@@ -698,6 +788,11 @@ async function saveAdminData() {
     if (!response.ok) {
         throw new Error("Could not save admin data");
     }
+    const payload = await response.json().catch(() => ({}));
+    if (payload?.data) {
+        adminData = mergeAdminData(payload.data);
+    }
+    setLastSavedSnapshot(adminData);
 }
 
 async function fetchClientRows() {
@@ -1014,13 +1109,42 @@ async function fetchDashboardStats() {
         dashboardStats = payload?.stats && typeof payload.stats === "object"
             ? payload.stats
             : { hourly: [], daily: [] };
+        concurrentLogins = Array.isArray(payload?.concurrentLogins) ? payload.concurrentLogins : [];
     } catch (error) {
         if (error.message === "admin_auth_required") {
             throw error;
         }
         dashboardStats = { hourly: [], daily: [] };
+        concurrentLogins = [];
     }
     renderDashboardChart();
+}
+
+async function fetchDeployStatus() {
+    if (!deployStatusStateInput) {
+        return;
+    }
+    try {
+        const response = await fetch(buildNoCacheUrl(ADMIN_DEPLOY_STATUS_API), {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("deploy_status_fetch_failed");
+        }
+        const payload = await response.json();
+        deployStatusState = payload?.status && typeof payload.status === "object"
+            ? payload.status
+            : deployStatusState;
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            throw error;
+        }
+    }
+    renderDeployStatus();
 }
 
 function formatBalance(value) {
@@ -1138,11 +1262,16 @@ function renderAlerts() {
     if (!alertsList) {
         return;
     }
-    if (!adminAlerts.length) {
-        alertsList.innerHTML = `<div class="simple-list-item"><span>Khong co canh bao moi.</span></div>`;
-        return;
-    }
-    alertsList.innerHTML = adminAlerts.slice(0, 80).map((alert) => `
+    const concurrentMarkup = (Array.isArray(concurrentLogins) && concurrentLogins.length)
+        ? concurrentLogins.slice(0, 20).map((entry) => `
+            <div class="simple-list-item">
+                <strong>Dang nhap trung • ${entry.userId}</strong>
+                <span>${entry.devices.length} thiet bi dang online</span>
+                <span>${entry.devices.map((device) => device.ipAddress || "-").join(", ")}</span>
+            </div>
+        `).join("")
+        : "";
+    const alertMarkup = adminAlerts.slice(0, 80).map((alert) => `
         <div class="simple-list-item">
             <strong>${alert.ack ? "Da doc" : "Moi"} • ${alert.userId}</strong>
             <span>IP: ${alert.ipAddress}</span>
@@ -1152,6 +1281,13 @@ function renderAlerts() {
             </div>
         </div>
     `).join("");
+
+    if (!concurrentMarkup && !alertMarkup) {
+        alertsList.innerHTML = `<div class="simple-list-item"><span>Khong co canh bao moi.</span></div>`;
+        return;
+    }
+
+    alertsList.innerHTML = `${concurrentMarkup}${alertMarkup}`;
 }
 
 function renderFirewallRules() {
@@ -1279,6 +1415,17 @@ function renderRolloutPanel() {
     updateRolloutPreview();
 }
 
+function renderDeployStatus() {
+    if (!deployStatusStateInput || !deployStatusNoteInput || !deployStatusTimestamp) {
+        return;
+    }
+    deployStatusStateInput.value = deployStatusState.state || "success";
+    deployStatusNoteInput.value = deployStatusState.note || "";
+    deployStatusTimestamp.textContent = deployStatusState.updatedAt
+        ? new Date(deployStatusState.updatedAt).toLocaleString("vi-VN")
+        : "Chua co";
+}
+
 function renderAccountForm() {
     const currentUser = getCurrentUser();
     currentUserInput.innerHTML = adminData.users.map((user) => `<option value="${user.id}">${user.desktopName}</option>`).join("");
@@ -1354,13 +1501,41 @@ function renderUsersTable() {
     if (!Array.isArray(adminData.users) || !adminData.users.length) {
         usersTableBody.innerHTML = `
             <tr>
-                <td colspan="7">Chua co user nao. Bam tab "Them user" de tao moi.</td>
+                <td colspan="8">Chua co user nao. Bam tab "Them user" de tao moi.</td>
             </tr>
         `;
         return;
     }
 
-    usersTableBody.innerHTML = adminData.users.map((user, index) => `
+    const filteredUsers = adminData.users.filter((user) => {
+        const searchValue = String(userFilters.search || "").trim().toLowerCase();
+        if (searchValue) {
+            const haystack = `${user.id} ${user.desktopName} ${user.limoreName}`.toLowerCase();
+            if (!haystack.includes(searchValue)) {
+                return false;
+            }
+        }
+        if (userFilters.balance === "gt0" && Number(user.balance) <= 0) {
+            return false;
+        }
+        if (userFilters.package === "none" && String(user.activePackageId || "")) {
+            return false;
+        }
+        return true;
+    });
+
+    if (!filteredUsers.length) {
+        usersTableBody.innerHTML = `
+            <tr>
+                <td colspan="8">Khong co user phu hop bo loc.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    usersTableBody.innerHTML = filteredUsers.map((user) => {
+        const index = adminData.users.findIndex((entry) => entry.id === user.id);
+        return `
         <tr data-index="${index}">
             <td>
                 <label class="user-active-toggle">
@@ -1375,6 +1550,11 @@ function renderUsersTable() {
                 <div class="balance-cell">
                     <input type="text" inputmode="decimal" data-field="balance" value="${formatBalanceInput(user.balance)}" placeholder="0 / 100k / 1m">
                     <small class="balance-preview">${formatBalance(user.balance)}</small>
+                    <div class="balance-actions">
+                        <button type="button" class="balance-quick-btn" data-action="quick-topup" data-amount="10000">+10k</button>
+                        <button type="button" class="balance-quick-btn" data-action="quick-topup" data-amount="50000">+50k</button>
+                        <button type="button" class="balance-quick-btn" data-action="quick-topup" data-amount="100000">+100k</button>
+                    </div>
                 </div>
             </td>
             <td>
@@ -1383,9 +1563,15 @@ function renderUsersTable() {
                     ${adminData.packages.map((pkg) => `<option value="${pkg.id}" ${pkg.id === user.activePackageId ? "selected" : ""}>${pkg.title}</option>`).join("")}
                 </select>
             </td>
+            <td>
+                <button type="button" class="user-lock-pill ${user.locked ? "is-locked" : ""}" data-action="toggle-user-lock">
+                    ${user.locked ? "Dang khoa" : "Hoat dong"}
+                </button>
+            </td>
             <td><button type="button" class="table-delete-btn" data-action="delete-user"><i class="fas fa-trash"></i></button></td>
         </tr>
-    `).join("");
+    `;
+    }).join("");
 }
 
 function renderClientsTable() {
@@ -1668,6 +1854,7 @@ function renderAll() {
     renderRoleUsersTable();
     renderAuditLogs();
     renderAlerts();
+    renderDeployStatus();
     renderFirewallRules();
     renderDashboardChart();
     renderGamesTable();
@@ -1731,6 +1918,17 @@ function handleCurrentUserChange() {
     renderOverview();
 }
 
+function confirmLargeBalanceChange(actionKey) {
+    const changes = getLargeBalanceChanges();
+    if (!changes.length) {
+        return false;
+    }
+    return shouldConfirmAction(
+        `balance:${actionKey}`,
+        `Canh bao: co ${changes.length} user doi so du lon. Bam lai de xac nhan`
+    );
+}
+
 function syncPackagesForm() {
     packagesForm.querySelectorAll(".package-editor[data-package-id]").forEach((card) => {
         const packageId = card.dataset.packageId;
@@ -1791,7 +1989,8 @@ function syncUsersTable() {
             desktopName: row.querySelector('[data-field="desktopName"]').value.trim() || `User ${index + 1}`,
             limoreName: row.querySelector('[data-field="limoreName"]').value.trim() || "Anonymous",
             balance: parsedBalance,
-            activePackageId: row.querySelector('[data-field="activePackageId"]').value || ""
+            activePackageId: row.querySelector('[data-field="activePackageId"]').value || "",
+            locked: Boolean((adminData.users[index] || {}).locked)
         };
     });
     adminData.users = sanitizeUsers(adminData.users);
@@ -1809,6 +2008,9 @@ async function handleSaveAll() {
     syncUsersTable();
     syncGamesTable();
     adminData.state.setupComplete = adminData.users.length > 0;
+    if (confirmLargeBalanceChange("save-all")) {
+        return;
+    }
     try {
         await saveAdminData();
         clearAdminEditing();
@@ -1820,6 +2022,101 @@ async function handleSaveAll() {
             return;
         }
         showStatus("Khong luu duoc len server");
+    }
+}
+
+async function handleQuickSaveAccount() {
+    syncAccountForm();
+    adminData.state.setupComplete = adminData.users.length > 0;
+    if (confirmLargeBalanceChange("quick-account")) {
+        return;
+    }
+    try {
+        await saveAdminData();
+        clearAdminEditing();
+        showStatus("Da luu nhanh tai khoan");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus("Khong luu nhanh duoc tai khoan");
+    }
+}
+
+async function handleQuickSaveUsers() {
+    syncUsersTable();
+    adminData.state.setupComplete = adminData.users.length > 0;
+    if (confirmLargeBalanceChange("quick-users")) {
+        return;
+    }
+    try {
+        await saveAdminData();
+        clearAdminEditing();
+        showStatus("Da luu nhanh danh sach user");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus("Khong luu nhanh duoc user");
+    }
+}
+
+async function handleQuickSavePackages() {
+    syncPackagesForm();
+    try {
+        await saveAdminData();
+        clearAdminEditing();
+        showStatus("Da luu nhanh goi cloud");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus("Khong luu nhanh duoc goi cloud");
+    }
+}
+
+async function handleQuickSaveGames() {
+    syncGamesTable();
+    try {
+        await saveAdminData();
+        clearAdminEditing();
+        showStatus("Da luu nhanh thu vien game");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus("Khong luu nhanh duoc game");
+    }
+}
+
+async function handleSyncAllClients() {
+    try {
+        const response = await fetch(ADMIN_SYNC_API, {
+            method: "POST",
+            headers: getAuthHeaders()
+        });
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("sync_failed");
+        }
+        showStatus("Da gui lenh dong bo den tat ca client");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus("Khong dong bo duoc client");
     }
 }
 
@@ -2043,6 +2340,13 @@ async function handleToggleClientBlock(clientId) {
     const blockedClientIds = new Set(getBlockedClientIds());
     const isBlocked = blockedClientIds.has(normalizedClientId);
 
+    if (!isBlocked) {
+        const confirmKey = `block-client:${normalizedClientId}`;
+        if (shouldConfirmAction(confirmKey, "Bam lai de xac nhan ngat client")) {
+            return;
+        }
+    }
+
     if (isBlocked) {
         blockedClientIds.delete(normalizedClientId);
     } else {
@@ -2121,6 +2425,71 @@ async function handleExportClientsCsv() {
             return;
         }
         showStatus(error.message || "Khong xuat duoc CSV");
+    }
+}
+
+async function handleExportAdminJson() {
+    try {
+        const response = await fetch(buildNoCacheUrl(ADMIN_DATA_EXPORT_API), {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("export_failed");
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `limore-admin-export-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        showStatus("Da export JSON");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus("Khong export duoc JSON");
+    }
+}
+
+async function handleImportAdminJson(file) {
+    if (!file) {
+        return;
+    }
+    try {
+        const raw = await file.text();
+        const payload = JSON.parse(raw);
+        const response = await fetch(ADMIN_DATA_IMPORT_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify(payload)
+        });
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("admin_auth_required");
+        }
+        const responsePayload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(responsePayload?.error || "Khong import duoc");
+        }
+        adminData = mergeAdminData(responsePayload?.data || adminData);
+        setLastSavedSnapshot(adminData);
+        renderAll();
+        showStatus("Da import JSON");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus("Import JSON loi");
     }
 }
 
@@ -2388,6 +2757,45 @@ async function handleSaveRolloutSettings() {
     }
 }
 
+async function handleSaveDeployStatus() {
+    if (!isSuperAdmin()) {
+        showStatus("Chi Super Admin duoc sua deploy status");
+        return;
+    }
+    if (!deployStatusStateInput || !deployStatusNoteInput) {
+        return;
+    }
+    try {
+        const response = await fetch(ADMIN_DEPLOY_STATUS_API, {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                status: {
+                    state: deployStatusStateInput.value,
+                    note: deployStatusNoteInput.value.trim()
+                }
+            })
+        });
+        if (response.status === 401 || response.status === 403) {
+            throw new Error("admin_auth_required");
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.error || "Khong luu duoc deploy status");
+        }
+        deployStatusState = payload?.status || deployStatusState;
+        renderDeployStatus();
+        showStatus("Da cap nhat deploy status");
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+        showStatus(error.message || "Khong luu duoc deploy status");
+    }
+}
+
 async function handleSaveRoleUser() {
     if (!isSuperAdmin()) {
         showStatus("Chi Super Admin duoc sua role user");
@@ -2479,7 +2887,8 @@ async function loadAdminDashboard() {
             fetchAuditLogs(),
             fetchAlerts(),
             fetchFirewallRules(),
-            fetchDashboardStats()
+            fetchDashboardStats(),
+            fetchDeployStatus()
         ]);
     } catch (error) {
         if (error.message === "admin_auth_required") {
@@ -2505,7 +2914,8 @@ function startAdminLiveSync() {
                 fetchAlerts(),
                 fetchFirewallRules(),
                 fetchDashboardStats(),
-                fetchRoleUsers()
+                fetchRoleUsers(),
+                fetchDeployStatus()
             ]);
             renderAll();
         } catch (error) {
@@ -2559,6 +2969,33 @@ gamesTableBody.addEventListener("input", () => {
     syncGamesTable();
 });
 usersTableBody.addEventListener("click", (event) => {
+    const quickTopupButton = event.target.closest('[data-action="quick-topup"]');
+    if (quickTopupButton) {
+        const row = quickTopupButton.closest("tr[data-index]");
+        const rowIndex = Number(row?.dataset.index);
+        const amount = Number(quickTopupButton.dataset.amount || 0);
+        if (!Number.isNaN(rowIndex) && Number.isFinite(amount) && amount > 0) {
+            adminData.users[rowIndex].balance = Number(adminData.users[rowIndex].balance || 0) + amount;
+            markAdminEditing();
+            renderUsersTable();
+            renderOverview();
+        }
+        return;
+    }
+
+    const lockButton = event.target.closest('[data-action="toggle-user-lock"]');
+    if (lockButton) {
+        const row = lockButton.closest("tr[data-index]");
+        const rowIndex = Number(row?.dataset.index);
+        if (!Number.isNaN(rowIndex)) {
+            const user = adminData.users[rowIndex];
+            user.locked = !user.locked;
+            markAdminEditing();
+            renderUsersTable();
+        }
+        return;
+    }
+
     const deleteButton = event.target.closest('[data-action="delete-user"]');
     if (!deleteButton) {
         return;
@@ -2567,6 +3004,14 @@ usersTableBody.addEventListener("click", (event) => {
     const row = deleteButton.closest("tr[data-index]");
     const rowIndex = Number(row?.dataset.index);
     if (Number.isNaN(rowIndex)) {
+        return;
+    }
+
+    const userId = adminData.users[rowIndex]?.id || "user";
+    const confirmKey = `delete-user:${userId}`;
+    if (shouldConfirmAction(confirmKey, `Bam lai de xac nhan xoa user ${userId}`)) {
+        deleteButton.classList.add("is-confirm");
+        window.setTimeout(() => deleteButton.classList.remove("is-confirm"), 1800);
         return;
     }
 
@@ -2628,6 +3073,11 @@ saveAllButton.addEventListener("click", handleSaveAll);
 resetDefaultsButton.addEventListener("click", handleResetDefaults);
 addGameButton.addEventListener("click", handleAddGame);
 addUserButton.addEventListener("click", handleAddUser);
+quickSaveAccountButton?.addEventListener("click", handleQuickSaveAccount);
+quickSaveUsersButton?.addEventListener("click", handleQuickSaveUsers);
+quickSavePackagesButton?.addEventListener("click", handleQuickSavePackages);
+quickSaveGamesButton?.addEventListener("click", handleQuickSaveGames);
+syncAllClientsButton?.addEventListener("click", handleSyncAllClients);
 adminLoginForm?.addEventListener("submit", handleAdminLogin);
 changePasswordButton?.addEventListener("click", handleChangePassword);
 saveOtpButton?.addEventListener("click", handleSaveOtpSettings);
@@ -2638,6 +3088,15 @@ ackAllAlertsButton?.addEventListener("click", handleAckAllAlerts);
 addFirewallRuleButton?.addEventListener("click", handleAddFirewallRule);
 dedupeClientsButton?.addEventListener("click", handleDedupeClients);
 exportClientsCsvButton?.addEventListener("click", handleExportClientsCsv);
+exportAdminJsonButton?.addEventListener("click", handleExportAdminJson);
+importAdminJsonButton?.addEventListener("click", () => importAdminJsonInput?.click());
+importAdminJsonInput?.addEventListener("change", (event) => {
+    const file = event.target?.files?.[0];
+    handleImportAdminJson(file);
+    if (importAdminJsonInput) {
+        importAdminJsonInput.value = "";
+    }
+});
 rolloutEnabledInput?.addEventListener("change", syncRolloutConfigFromForm);
 rolloutPercentInput?.addEventListener("input", syncRolloutConfigFromForm);
 rolloutStableVersionInput?.addEventListener("input", syncRolloutConfigFromForm);
@@ -2655,6 +3114,7 @@ rolloutQuickPercentButtons.forEach((button) => {
     });
 });
 saveRolloutButton?.addEventListener("click", handleSaveRolloutSettings);
+saveDeployStatusButton?.addEventListener("click", handleSaveDeployStatus);
 clientFilterOnline?.addEventListener("change", () => {
     clientFilters.online = clientFilterOnline.value || "all";
     renderClientsTable();
@@ -2670,6 +3130,33 @@ clientFilterIp?.addEventListener("input", () => {
 clientFilterUser?.addEventListener("input", () => {
     clientFilters.user = clientFilterUser.value.trim();
     renderClientsTable();
+});
+userSearchInput?.addEventListener("input", () => {
+    userFilters.search = userSearchInput.value.trim();
+    renderUsersTable();
+});
+userFilterBalance?.addEventListener("change", () => {
+    userFilters.balance = userFilterBalance.value || "all";
+    renderUsersTable();
+});
+userFilterPackage?.addEventListener("change", () => {
+    userFilters.package = userFilterPackage.value || "all";
+    renderUsersTable();
+});
+userFilterResetButton?.addEventListener("click", () => {
+    userFilters.search = "";
+    userFilters.balance = "all";
+    userFilters.package = "all";
+    if (userSearchInput) {
+        userSearchInput.value = "";
+    }
+    if (userFilterBalance) {
+        userFilterBalance.value = "all";
+    }
+    if (userFilterPackage) {
+        userFilterPackage.value = "all";
+    }
+    renderUsersTable();
 });
 clientFilterResetButton?.addEventListener("click", () => {
     clientFilters.online = "all";

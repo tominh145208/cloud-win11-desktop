@@ -213,6 +213,9 @@
                         <span>Goi dang dung</span>
                         <select id="active-package-input"></select>
                     </label>
+                    <div class="admin-quick-save">
+                        <button id="quick-save-account-button" type="button" class="admin-btn is-primary">Luu nhanh tai khoan</button>
+                    </div>
                 </div>
                         </article>
 
@@ -340,6 +343,31 @@
                         <button id="add-user-button" type="button" class="admin-btn is-primary">Them user</button>
                     </div>
                 </div>
+                <div class="admin-quick-save">
+                    <button id="quick-save-users-button" type="button" class="admin-btn is-primary">Luu nhanh danh sach user</button>
+                    <button id="sync-all-clients-button" type="button" class="admin-btn">Dong bo tat ca client</button>
+                </div>
+                <div class="admin-filter-bar admin-user-filters" data-user-panel="list" hidden>
+                    <label class="field">
+                        <span>Tim user</span>
+                        <input id="user-search-input" type="text" placeholder="User ID / Desktop / Limore">
+                    </label>
+                    <label class="field">
+                        <span>Loc so du</span>
+                        <select id="user-filter-balance">
+                            <option value="all">Tat ca</option>
+                            <option value="gt0">So du > 0</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Loc goi</span>
+                        <select id="user-filter-package">
+                            <option value="all">Tat ca</option>
+                            <option value="none">Chua co goi</option>
+                        </select>
+                    </label>
+                    <button id="user-filter-reset-button" type="button" class="admin-btn">Xoa loc</button>
+                </div>
                 <div class="games-table-wrap" data-user-panel="list" hidden>
                     <table class="games-table">
                         <thead>
@@ -350,6 +378,7 @@
                                 <th>Limore name</th>
                                 <th>So du</th>
                                 <th>Goi</th>
+                                <th>Khoa</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -368,6 +397,7 @@
                     <div class="admin-subtab-nav" data-admin-subnav>
                         <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="clients-list">Danh sach thiet bi</button>
                         <button type="button" class="admin-subtab-btn" data-admin-subtab-target="clients-firewall">Tuong lua mini</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="clients-deploy">Deploy status</button>
                     </div>
                     <section class="admin-panel" data-admin-subtab-panel="clients-list">
             <div class="panel-head">
@@ -438,6 +468,34 @@
                             <div id="firewall-rules-list" class="simple-list"></div>
                         </div>
                     </section>
+
+                    <section class="admin-panel" data-admin-subtab-panel="clients-deploy" hidden>
+                        <div class="panel-head">
+                            <h2>Deploy status</h2>
+                            <p>Trang thai deploy hien tai. Super Admin moi duoc doi trang thai nay.</p>
+                        </div>
+                        <div class="panel-body form-grid">
+                            <label class="field">
+                                <span>Trang thai</span>
+                                <select id="deploy-status-state-input">
+                                    <option value="building">Dang build</option>
+                                    <option value="success">Thanh cong</option>
+                                    <option value="fail">That bai</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Ghi chu</span>
+                                <input id="deploy-status-note-input" type="text" placeholder="VD: Fix UI + balance">
+                            </label>
+                            <div class="admin-quick-save">
+                                <button id="save-deploy-status-button" type="button" class="admin-btn is-primary">Luu deploy status</button>
+                            </div>
+                            <div class="field field-wide">
+                                <span>Cap nhat luc</span>
+                                <div id="deploy-status-timestamp" class="field-subhint">Chua co</div>
+                            </div>
+                        </div>
+                    </section>
                 </section>
 
                 <section class="admin-section" data-admin-section="packages">
@@ -454,6 +512,9 @@
                 <p>Sua ten goi, gia, mo ta va cau hinh.</p>
             </div>
             <div id="packages-form" class="package-admin-grid"></div>
+            <div class="admin-quick-save">
+                <button id="quick-save-packages-button" type="button" class="admin-btn is-primary">Luu nhanh goi cloud</button>
+            </div>
                     </section>
                 </section>
 
@@ -465,6 +526,7 @@
                     <div class="admin-subtab-nav" data-admin-subnav>
                         <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="games-add">Them game</button>
                         <button type="button" class="admin-subtab-btn" data-admin-subtab-target="games-list">Danh sach game</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="games-import">Export/Import</button>
                     </div>
                     <section class="admin-panel">
             <div class="panel-head">
@@ -495,6 +557,9 @@
                     </label>
                     <button id="add-game-button" type="button" class="admin-btn is-primary">Them game</button>
                 </div>
+                <div class="admin-quick-save">
+                    <button id="quick-save-games-button" type="button" class="admin-btn is-primary">Luu nhanh thu vien game</button>
+                </div>
             </div>
 
             <div class="panel-body" data-admin-subtab-panel="games-list" hidden>
@@ -513,6 +578,14 @@
                         <tbody id="games-table-body"></tbody>
                     </table>
                 </div>
+            </div>
+            <div class="panel-body" data-admin-subtab-panel="games-import" hidden>
+                <div class="admin-quick-save">
+                    <button id="export-admin-json-button" type="button" class="admin-btn is-primary">Export JSON</button>
+                    <button id="import-admin-json-button" type="button" class="admin-btn">Import JSON</button>
+                    <input id="import-admin-json-input" type="file" accept="application/json" hidden>
+                </div>
+                <p class="field-subhint">Export/import toan bo game, goi, user, state de chuyen server nhanh.</p>
             </div>
                     </section>
                 </section>

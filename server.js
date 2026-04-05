@@ -26,6 +26,13 @@ const DEFAULT_ROLLOUT_CONFIG = Object.freeze({
     latestVersion: "latest",
     updatedAt: ""
 });
+const ONLINE_THRESHOLD_MS = 180000;
+const DEFAULT_DEPLOY_STATUS = Object.freeze({
+    state: "success",
+    updatedAt: "",
+    note: "",
+    source: "server"
+});
 
 const MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -247,6 +254,56 @@ function getBlockedClientIds(data) {
         : [];
 }
 
+function sanitizeLimoreUsers(users, fallbackUsers = []) {
+    const sourceUsers = Array.isArray(users) && users.length
+        ? users
+        : (Array.isArray(fallbackUsers) ? fallbackUsers : []);
+    const seen = new Set();
+    const nextUsers = sourceUsers
+        .map((entry, index) => ({
+            id: String(entry?.id || `user${index + 1}`).trim() || `user${index + 1}`,
+            desktopName: String(entry?.desktopName || `User ${index + 1}`).trim() || `User ${index + 1}`,
+            limoreName: String(entry?.limoreName || "Anonymous").trim() || "Anonymous",
+            balance: Math.max(0, Math.round(Number(entry?.balance || 0))),
+            activePackageId: String(entry?.activePackageId || "").trim(),
+            locked: Boolean(entry?.locked)
+        }))
+        .filter((entry) => {
+            if (!entry.id || seen.has(entry.id)) {
+                return false;
+            }
+            seen.add(entry.id);
+            return true;
+        });
+
+    if (!nextUsers.length) {
+        nextUsers.push({
+            id: "dzminh",
+            desktopName: "Dz Minh",
+            limoreName: "Anonymous",
+            balance: 0,
+            activePackageId: "",
+            locked: false
+        });
+    }
+    return nextUsers;
+}
+
+function sanitizeDeployStatus(rawStatus = {}, fallbackStatus = DEFAULT_DEPLOY_STATUS) {
+    const safeState = String(rawStatus?.state || fallbackStatus.state || "success").trim().toLowerCase();
+    const nextState = safeState === "building" || safeState === "fail" ? safeState : "success";
+    return {
+        state: nextState,
+        updatedAt: String(rawStatus?.updatedAt || fallbackStatus.updatedAt || "").trim(),
+        note: String(rawStatus?.note || fallbackStatus.note || "").trim().slice(0, 240),
+        source: String(rawStatus?.source || fallbackStatus.source || "server").trim().slice(0, 80) || "server"
+    };
+}
+
+function getDeployStatus(data) {
+    return sanitizeDeployStatus(data?.state?.deployStatus || {}, DEFAULT_DEPLOY_STATUS);
+}
+
 function sanitizeRolloutConfig(rawConfig = {}, fallbackConfig = DEFAULT_ROLLOUT_CONFIG) {
     const percentRaw = Number(rawConfig?.percent ?? fallbackConfig.percent);
     const percent = Number.isFinite(percentRaw)
@@ -451,6 +508,31 @@ function mergeClientRows(clients) {
 
     return Array.from(byFingerprint.values())
         .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")));
+}
+
+function buildConcurrentLoginAlerts(clients) {
+    const now = Date.now();
+    const recentClients = (Array.isArray(clients) ? clients : []).filter((client) => {
+        const lastSeenMs = client?.lastSeenAt ? new Date(client.lastSeenAt).getTime() : 0;
+        return lastSeenMs > 0 && now - lastSeenMs <= ONLINE_THRESHOLD_MS;
+    });
+    const bucket = new Map();
+    recentClients.forEach((client) => {
+        const userId = String(client?.currentUserId || "").trim();
+        if (!userId) {
+            return;
+        }
+        const deviceKey = buildClientFingerprint(client);
+        const existing = bucket.get(userId) || { userId, devices: new Map() };
+        existing.devices.set(deviceKey, client);
+        bucket.set(userId, existing);
+    });
+    return Array.from(bucket.values())
+        .map((entry) => ({
+            userId: entry.userId,
+            devices: Array.from(entry.devices.values())
+        }))
+        .filter((entry) => entry.devices.length >= 2);
 }
 
 function getFirewallRules(data) {
@@ -672,6 +754,18 @@ function parseJsonBody(req) {
         });
         req.on("error", reject);
     });
+}
+
+function buildUserIndex(users) {
+    const map = new Map();
+    (Array.isArray(users) ? users : []).forEach((user) => {
+        const id = String(user?.id || "").trim();
+        if (!id) {
+            return;
+        }
+        map.set(id, user);
+    });
+    return map;
 }
 
 function writeLanGuideFile() {
@@ -1201,6 +1295,165 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    if (pathname === "/api/admin-sync" && req.method === "POST") {
+        if (!isAuthorizedAdmin(req)) {
+            res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Unauthorized" }));
+            return;
+        }
+        const data = readAdminData();
+        const nextData = {
+            ...data,
+            state: {
+                ...(data.state || {}),
+                syncSignal: `sync-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+            }
+        };
+        writeAdminData(nextData);
+        appendAdminAuditLog({
+            type: "admin_sync_clients",
+            username: getAdminSession(req)?.username || "unknown",
+            role: getAdminSession(req)?.role || "unknown",
+            ipAddress: getClientIp(req),
+            detail: "Dong bo tat ca client"
+        });
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({
+            ok: true,
+            syncSignal: nextData.state.syncSignal
+        }));
+        return;
+    }
+
+    if (pathname === "/api/admin-deploy-status") {
+        if (!isAuthorizedAdmin(req)) {
+            res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Unauthorized" }));
+            return;
+        }
+
+        if (req.method === "GET") {
+            const data = readAdminData();
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
+            res.end(JSON.stringify({
+                ok: true,
+                status: getDeployStatus(data)
+            }));
+            return;
+        }
+
+        if (req.method === "POST") {
+            if (!isSuperAdmin(req)) {
+                res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({ ok: false, error: "Chi Super Admin duoc sua deploy status" }));
+                return;
+            }
+            try {
+                const payload = await parseJsonBody(req);
+                const data = readAdminData();
+                const nextStatus = sanitizeDeployStatus({
+                    ...getDeployStatus(data),
+                    ...(payload?.status || payload || {}),
+                    updatedAt: new Date().toISOString(),
+                    source: "admin"
+                }, DEFAULT_DEPLOY_STATUS);
+                const nextData = {
+                    ...data,
+                    state: {
+                        ...(data.state || {}),
+                        deployStatus: nextStatus
+                    }
+                };
+                writeAdminData(nextData);
+                appendAdminAuditLog({
+                    type: "admin_update_deploy_status",
+                    username: getAdminSession(req)?.username || "unknown",
+                    role: getAdminSession(req)?.role || "unknown",
+                    ipAddress: getClientIp(req),
+                    detail: `Deploy status ${nextStatus.state}`
+                });
+                res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({
+                    ok: true,
+                    status: nextStatus
+                }));
+            } catch (error) {
+                res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({ ok: false, error: "Invalid JSON payload" }));
+            }
+            return;
+        }
+    }
+
+    if (pathname === "/api/admin-data/export" && req.method === "GET") {
+        if (!isAuthorizedAdmin(req)) {
+            res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Unauthorized" }));
+            return;
+        }
+        const data = readAdminData();
+        const payload = {
+            exportedAt: new Date().toISOString(),
+            data: {
+                games: Array.isArray(data.games) ? data.games : [],
+                packages: Array.isArray(data.packages) ? data.packages : [],
+                users: sanitizeLimoreUsers(data.users),
+                state: data?.state && typeof data.state === "object" ? data.state : {}
+            }
+        };
+        res.writeHead(200, {
+            "Content-Type": "application/json; charset=utf-8",
+            "Content-Disposition": `attachment; filename=\"limore-admin-export-${new Date().toISOString().slice(0, 10)}.json\"`,
+            "Cache-Control": "no-cache"
+        });
+        res.end(JSON.stringify(payload, null, 2));
+        return;
+    }
+
+    if (pathname === "/api/admin-data/import" && req.method === "POST") {
+        if (!isAuthorizedAdmin(req)) {
+            res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Unauthorized" }));
+            return;
+        }
+        if (!isSuperAdmin(req)) {
+            res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Chi Super Admin duoc import du lieu" }));
+            return;
+        }
+        try {
+            const payload = await parseJsonBody(req);
+            const incoming = payload?.data && typeof payload.data === "object" ? payload.data : payload;
+            const data = readAdminData();
+            const nextUsers = sanitizeLimoreUsers(incoming?.users, data.users);
+            const nextState = {
+                ...(data.state || {}),
+                ...(incoming?.state || {})
+            };
+            const nextData = {
+                ...data,
+                games: Array.isArray(incoming?.games) ? incoming.games : (data.games || []),
+                packages: Array.isArray(incoming?.packages) ? incoming.packages : (data.packages || []),
+                users: nextUsers,
+                state: nextState
+            };
+            writeAdminData(nextData);
+            appendAdminAuditLog({
+                type: "admin_import_data",
+                username: getAdminSession(req)?.username || "unknown",
+                role: getAdminSession(req)?.role || "unknown",
+                ipAddress: getClientIp(req),
+                detail: "Import admin data"
+            });
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: true, data: nextData }));
+        } catch (error) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Invalid JSON payload" }));
+        }
+        return;
+    }
+
     if (pathname === "/api/admin-alerts") {
         if (!isAuthorizedAdmin(req)) {
             res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
@@ -1261,10 +1514,13 @@ const server = http.createServer(async (req, res) => {
         }
         const data = readAdminData();
         const stats = buildOnlineStats(getClientHistory(data));
+        const mergedClients = mergeClientRows(data.clients);
+        const concurrentLogins = buildConcurrentLoginAlerts(mergedClients);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
         res.end(JSON.stringify({
             ok: true,
-            stats
+            stats,
+            concurrentLogins
         }));
         return;
     }
@@ -1342,7 +1598,9 @@ const server = http.createServer(async (req, res) => {
                 ok: true,
                 data,
                 rememberedCurrentUserId,
-                rollout
+                rollout,
+                syncSignal: String(data?.state?.syncSignal || ""),
+                deployStatus: getDeployStatus(data)
             }));
             return;
         }
@@ -1360,20 +1618,27 @@ const server = http.createServer(async (req, res) => {
                     res.end(JSON.stringify({ ok: false, error: "Admin auth required for rollout settings" }));
                     return;
                 }
+                if (payload?.state?.deployStatus !== undefined && !isAuthorizedAdmin(req)) {
+                    res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+                    res.end(JSON.stringify({ ok: false, error: "Admin auth required for deploy status" }));
+                    return;
+                }
                 const existing = readAdminData();
                 const payloadClients = Array.isArray(payload?.clients) ? payload.clients : [];
                 const session = getAdminSession(req);
                 const incomingUsers = Array.isArray(payload?.users) ? payload.users : null;
                 const existingUsers = Array.isArray(existing?.users) ? existing.users : [];
                 const canEditUserBalances = Boolean(session);
-                const nextUsers = incomingUsers
-                    ? incomingUsers.map((entry) => ({
-                        ...entry,
-                        balance: canEditUserBalances
-                            ? Number(entry?.balance || 0)
-                            : Number(existingUsers.find((user) => String(user?.id || "") === String(entry?.id || ""))?.balance || 0)
-                    }))
-                    : existingUsers;
+                const safeIncomingUsers = incomingUsers
+                    ? sanitizeLimoreUsers(incomingUsers, existingUsers)
+                    : sanitizeLimoreUsers(existingUsers);
+                const nextUsers = safeIncomingUsers.map((entry) => ({
+                    ...entry,
+                    balance: canEditUserBalances
+                        ? Number(entry?.balance || 0)
+                        : Number(existingUsers.find((user) => String(user?.id || "") === String(entry?.id || ""))?.balance || 0),
+                    locked: Boolean(entry?.locked)
+                }));
                 const nextData = {
                     ...existing,
                     ...payload,
@@ -1386,12 +1651,21 @@ const server = http.createServer(async (req, res) => {
                 };
                 if (!isSuperAdmin(req)) {
                     nextData.state.rollout = getRolloutConfig(existing);
+                    nextData.state.deployStatus = getDeployStatus(existing);
                 } else if (payload?.state?.rollout !== undefined) {
                     nextData.state.rollout = sanitizeRolloutConfig({
                         ...getRolloutConfig(existing),
                         ...(payload?.state?.rollout || {}),
                         updatedAt: new Date().toISOString()
                     });
+                }
+                if (payload?.state?.deployStatus !== undefined && isSuperAdmin(req)) {
+                    nextData.state.deployStatus = sanitizeDeployStatus({
+                        ...getDeployStatus(existing),
+                        ...(payload?.state?.deployStatus || {}),
+                        updatedAt: new Date().toISOString(),
+                        source: "admin"
+                    }, DEFAULT_DEPLOY_STATUS);
                 }
                 writeAdminData(nextData);
                 if (session) {
@@ -1454,6 +1728,9 @@ const server = http.createServer(async (req, res) => {
                 const blockedByFirewall = isIpBlocked(clientIp, firewallRules);
                 const rollout = resolveClientRollout(data, clientId, clientIp);
 
+                const userIndex = buildUserIndex(data?.users);
+                const currentUser = userIndex.get(String(payload.currentUserId || "").trim());
+                const userLocked = Boolean(currentUser?.locked);
                 const nextClient = {
                     clientId,
                     ipAddress: clientIp,
@@ -1588,7 +1865,8 @@ const server = http.createServer(async (req, res) => {
                     ok: true,
                     blocked: blockedClientIds.includes(clientId),
                     blockedByFirewall: false,
-                    rollout
+                    rollout,
+                    userLocked
                 }));
             } catch (error) {
                 res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
