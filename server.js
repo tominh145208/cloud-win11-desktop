@@ -8,7 +8,6 @@ const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 const ROOT_DIR = __dirname;
 const lanAddresses = getLocalIPv4Addresses();
-const LAN_GUIDE_PATH = path.join(ROOT_DIR, "lan-links.txt");
 const DATA_DIR = process.env.DATA_DIR
     ? path.resolve(process.env.DATA_DIR)
     : path.join(ROOT_DIR, "data");
@@ -766,41 +765,6 @@ function buildUserIndex(users) {
         map.set(id, user);
     });
     return map;
-}
-
-function writeLanGuideFile() {
-    const lines = [
-        "WIN11 LAN LINKS",
-        "",
-        `Local: http://localhost:${PORT}`,
-        `Local Admin: http://localhost:${PORT}/admin.html`,
-        ""
-    ];
-
-    if (lanAddresses.length > 0) {
-        lines.push("LAN:");
-        lanAddresses.forEach((ip) => {
-            lines.push(`http://${ip}:${PORT}`);
-            lines.push(`http://${ip}:${PORT}/admin.html`);
-        });
-    } else {
-        lines.push("LAN:");
-        lines.push("(No IPv4 LAN address found)");
-    }
-
-    lines.push("");
-    lines.push("IOS SAFARI:");
-    lines.push("1. Open one LAN link above directly in Safari.");
-    lines.push("2. Make sure iPhone and PC use the same Wi-Fi.");
-    lines.push("3. If iPhone asks for Local Network access, tap Allow.");
-    lines.push("4. If Windows Firewall asks, allow Private network access.");
-    lines.push("5. Use the direct LAN link, not localhost.");
-
-    try {
-        fs.writeFileSync(LAN_GUIDE_PATH, lines.join(os.EOL), "utf8");
-    } catch (error) {
-        console.error("Could not write lan-links.txt");
-    }
 }
 
 const server = http.createServer(async (req, res) => {
@@ -1914,12 +1878,23 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
-        // SPA-like fallback to index for unknown routes.
+        if (pathname.startsWith("/api/")) {
+            res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "API endpoint not found" }));
+            return;
+        }
+
+        // Missing static file should be 404, not index fallback.
+        if (path.extname(pathname)) {
+            res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+            res.end("Not Found");
+            return;
+        }
+
+        // SPA-like fallback to index for unknown app routes.
         sendFile(res, path.join(ROOT_DIR, "index.html"));
     });
 });
-
-writeLanGuideFile();
 
 server.listen(PORT, HOST, () => {
     console.log("");
@@ -1935,7 +1910,5 @@ server.listen(PORT, HOST, () => {
         console.log("- LAN:     (No IPv4 address found)");
     }
     console.log("");
-    console.log(`Saved LAN links to: ${LAN_GUIDE_PATH}`);
     console.log("Open one LAN URL above on iOS Safari / Android Chrome.");
-    console.log("If Windows Firewall asks, allow Private network access.");
 });

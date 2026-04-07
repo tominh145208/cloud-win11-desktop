@@ -1168,13 +1168,12 @@
             toggleQuickSettings(event);
         });
 
-        clockButton?.addEventListener("click", (event) => {
-            event.stopImmediatePropagation();
+        clockButton?.addEventListener("contextmenu", (event) => {
             event.preventDefault();
             hideExtraPanels();
             notificationCenterEl?.classList.toggle("open");
             renderNotifications();
-        }, true);
+        });
 
         powerButtonEl?.addEventListener("click", (event) => {
             event.stopImmediatePropagation();

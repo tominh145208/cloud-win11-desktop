@@ -880,12 +880,14 @@ body.mobile-fit .chrome-window {
 }
 
 .clock #time {
+    display: block;
     color: var(--win-text);
     font-size: 12px;
     font-weight: 600;
 }
 
 .clock #date {
+    display: block;
     color: rgba(241, 246, 252, 0.72);
     font-size: 11px;
 }

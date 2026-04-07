@@ -183,7 +183,7 @@ const appCatalog = {
     },
     edge: {
         name: "Microsoft Edge",
-        icon: "https://img.icons8.com/fluency/48/microsoft-edge.png",
+        icon: "assets/edge-custom-v1.png",
         description: "Edge dang chay voi giao dien gia lap."
     },
     files: {
@@ -5523,3 +5523,4 @@ function registerPwaServiceWorker() {
 registerPwaServiceWorker();
 initializeRolloutFromLocalCache();
 bootstrapApp();
+
