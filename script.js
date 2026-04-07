@@ -90,8 +90,6 @@ const controllerSizeDownButton = document.getElementById("controller-size-down")
 const controllerSizeUpButton = document.getElementById("controller-size-up");
 const controllerResetLayoutButton = document.getElementById("controller-reset-layout");
 const uiShell = document.getElementById("ui-shell");
-const presenceOnlineCount = document.getElementById("presence-online-count");
-const presenceTotalCount = document.getElementById("presence-total-count");
 
 const MOBILE_FIT_BREAKPOINT = 900;
 const MOBILE_FIT_BASE_WIDTH = 1366;
@@ -112,7 +110,6 @@ let screenWakeLock = null;
 let wakeLockBootstrapped = false;
 const wakeLockBootstrapEvents = ["pointerdown", "touchstart", "keydown"];
 let lastClientHeartbeatAt = 0;
-let lastPresenceStatsAt = 0;
 
 async function requestScreenWakeLock() {
     if (!("wakeLock" in navigator) || document.visibilityState !== "visible") {
@@ -276,7 +273,6 @@ const LIMORE_ADMIN_DATA_KEY = "win11_limore_admin_data_v1";
 const LIMORE_SYNC_SIGNAL_KEY = "win11_limore_sync_signal_v1";
 const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
 const LIMORE_CLIENTS_API = "/api/limore-clients";
-const LIMORE_STATS_API = "/api/limore-stats";
 const LIMORE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
 const DESKTOP_CURRENT_USER_KEY = "win11_current_user_id_v1";
 const LIMORE_ROLLOUT_ASSIGNMENT_KEY = "win11_rollout_assignment_v1";
@@ -522,36 +518,6 @@ function getClientDeviceType() {
     return "desktop";
 }
 
-function renderPresenceStats(online = 0, total = 0) {
-    if (presenceOnlineCount) {
-        presenceOnlineCount.textContent = String(Math.max(0, Number(online) || 0));
-    }
-    if (presenceTotalCount) {
-        presenceTotalCount.textContent = String(Math.max(0, Number(total) || 0));
-    }
-}
-
-async function fetchPresenceStats(force = false) {
-    const now = Date.now();
-    if (!force && now - lastPresenceStatsAt < 7000) {
-        return;
-    }
-    lastPresenceStatsAt = now;
-
-    try {
-        const response = await fetch(buildNoCacheUrl(LIMORE_STATS_API), {
-            cache: "no-store"
-        });
-        if (!response.ok) {
-            return;
-        }
-        const payload = await response.json();
-        renderPresenceStats(payload?.online, payload?.total);
-    } catch (error) {
-        // Ignore temporary network failures.
-    }
-}
-
 function syncClientBlockScreen() {
     const isBlocked = blockedClientIds.includes(getOrCreateClientId());
     if (isBlocked) {
@@ -628,7 +594,6 @@ function sendClientHeartbeat(force = false) {
                 blockedClientIds = blockedClientIds.filter((clientId) => clientId !== currentClientId);
             }
             syncClientBlockScreen();
-            fetchPresenceStats();
         })
         .catch(() => {});
 }
@@ -5456,7 +5421,6 @@ async function bootstrapApp() {
     clampVirtualControlsToViewport();
     normalizeOpenWindowsForViewport();
     applyLimoreAdminData(await fetchLimoreAdminDataFromServer());
-    await fetchPresenceStats(true);
     loadDesktopWallpaperPreference();
     renderCalendar(calendarViewDate);
     initializeScreenWakeLock();
@@ -5521,11 +5485,9 @@ async function bootstrapApp() {
         if (document.visibilityState === "visible") {
             refreshLimoreAdminDataFromServer();
             sendClientHeartbeat(true);
-            fetchPresenceStats(true);
         }
     });
     setInterval(refreshLimoreAdminDataFromServer, 15000);
-    setInterval(fetchPresenceStats, 15000);
     setInterval(() => sendClientHeartbeat(true), 30000);
     volumeButton.addEventListener("click", toggleQuickSettings);
     quickSettings.addEventListener("click", (event) => event.stopPropagation());

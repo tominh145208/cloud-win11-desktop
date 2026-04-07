@@ -223,6 +223,46 @@ body {
     background: rgba(255, 255, 255, 0.04);
 }
 
+.admin-presence {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 4px;
+}
+
+.admin-presence-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-presence-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #6b7280;
+    box-shadow: 0 0 10px rgba(107, 114, 128, 0.45);
+}
+
+.admin-presence-dot.is-online {
+    background: #34d97b;
+    box-shadow: 0 0 12px rgba(52, 217, 123, 0.5);
+}
+
+.admin-presence-item strong {
+    font-size: 12px;
+    color: #f2f6ff;
+}
+
+.admin-presence-item small {
+    font-size: 11px;
+    color: rgba(230, 236, 247, 0.78);
+}
+
 .admin-section {
     display: none;
     margin-top: 14px;
@@ -1011,6 +1051,14 @@ body {
     .form-grid,
     .game-form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .admin-actions {
+        flex-wrap: wrap;
+    }
+
+    .admin-presence {
+        margin-left: 0;
     }
 
     .admin-modal-grid {

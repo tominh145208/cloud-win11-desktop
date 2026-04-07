@@ -4698,52 +4698,6 @@ body.mobile-fit .desktop-selection-box {
     font-weight: 700;
 }
 
-.desktop-presence {
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    z-index: 1200;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-radius: 14px;
-    background: rgba(16, 22, 33, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #e3ecff;
-    font-size: 12px;
-    letter-spacing: 0.2px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 16px 30px rgba(5, 10, 20, 0.35);
-}
-
-.desktop-presence .presence-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.desktop-presence .presence-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: #6b7280;
-    box-shadow: 0 0 10px rgba(107, 114, 128, 0.6);
-}
-
-.desktop-presence .presence-dot.is-online {
-    background: #2fd46a;
-    box-shadow: 0 0 12px rgba(47, 212, 106, 0.55);
-}
-
-body.mobile-fit .desktop-presence {
-    top: 10px;
-    right: 10px;
-    padding: 6px 10px;
-    border-radius: 12px;
-    font-size: 11px;
-}
-
 .qs-brightness {
     padding: 12px 14px;
     border-top: 1px solid #d5d8de;

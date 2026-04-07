@@ -177,6 +177,8 @@ const importAdminJsonInput = document.getElementById("import-admin-json-input");
 const overviewBalance = document.getElementById("overview-balance");
 const overviewPackage = document.getElementById("overview-package");
 const overviewGames = document.getElementById("overview-games");
+const adminOnlineCount = document.getElementById("admin-online-count");
+const adminTotalCount = document.getElementById("admin-total-count");
 const adminStatus = document.getElementById("admin-status");
 const adminShell = document.getElementById("admin-shell");
 const adminAuthScreen = document.getElementById("admin-auth-screen");
@@ -1374,6 +1376,45 @@ function renderOverview() {
     overviewPackage.textContent = activePackage ? activePackage.title : "Chua co";
 }
 
+function renderAdminPresence() {
+    if (!adminOnlineCount || !adminTotalCount) {
+        return;
+    }
+
+    const rows = mergeClientRows(clientRows);
+    const now = Date.now();
+    const online = rows.filter((client) => {
+        const lastSeenMs = Date.parse(String(client?.lastSeenAt || ""));
+        return Number.isFinite(lastSeenMs) && now - lastSeenMs <= CLIENT_ONLINE_THRESHOLD_MS;
+    }).length;
+
+    const historyRows = Array.isArray(adminData?.state?.clientHistory) ? adminData.state.clientHistory : [];
+    const uniqueClientKeys = new Set();
+    historyRows.forEach((entry) => {
+        const clientId = String(entry?.clientId || "").trim();
+        const fingerprint = String(entry?.fingerprint || "").trim();
+        if (clientId) {
+            uniqueClientKeys.add(`id:${clientId}`);
+        } else if (fingerprint) {
+            uniqueClientKeys.add(`fp:${fingerprint}`);
+        }
+    });
+    if (!uniqueClientKeys.size) {
+        rows.forEach((client) => {
+            const clientId = String(client?.clientId || "").trim();
+            const fingerprint = buildClientFingerprint(client);
+            if (clientId) {
+                uniqueClientKeys.add(`id:${clientId}`);
+            } else if (fingerprint) {
+                uniqueClientKeys.add(`fp:${fingerprint}`);
+            }
+        });
+    }
+
+    adminOnlineCount.textContent = String(online);
+    adminTotalCount.textContent = String(uniqueClientKeys.size);
+}
+
 function getCurrentRolloutConfig() {
     const fallback = defaultState.rollout;
     adminData.state = adminData.state && typeof adminData.state === "object" ? adminData.state : {};
@@ -1846,6 +1887,7 @@ function mergeClientRows(clients) {
 
 function renderAll() {
     renderOverview();
+    renderAdminPresence();
     renderRolloutPanel();
     renderAccountForm();
     renderPackagesForm();
