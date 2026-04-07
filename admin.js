@@ -1799,10 +1799,11 @@ function renderClientActivityPanel() {
                 </div>
             `;
         } else {
+            const latestRowsCount = getLatestClientActivityRows(clientActivityRows).length;
             activityLiveUsers.innerHTML = `
                 <div class="simple-list-item">
                     <strong>Da chap nhan theo doi: ${acceptedCount} tai khoan</strong>
-                    <span>Dang online: ${onlineCount}. Du lieu van duoc luu de xem lai khi nguoi choi da thoat app.</span>
+                    <span>Dang online: ${onlineCount}. Hien thi 1 dong moi nhat moi thiet bi (${latestRowsCount} dong).</span>
                 </div>
                 ${liveTrackingUsers.slice(0, 8).map((entry) => `
                     <div class="simple-list-item">
@@ -1818,7 +1819,8 @@ function renderClientActivityPanel() {
         return;
     }
 
-    if (!clientActivityRows.length) {
+    const latestRows = getLatestClientActivityRows(clientActivityRows);
+    if (!latestRows.length) {
         clientActivityTableBody.innerHTML = `
             <tr>
                 <td colspan="6">Chua co thao tac nao duoc ghi nhan tu tai khoan da chap nhan.</td>
@@ -1827,7 +1829,7 @@ function renderClientActivityPanel() {
         return;
     }
 
-    clientActivityTableBody.innerHTML = clientActivityRows.map((entry) => {
+    clientActivityTableBody.innerHTML = latestRows.map((entry) => {
         const atLabel = entry?.at ? new Date(entry.at).toLocaleString("vi-VN") : "-";
         const userLabel = entry?.desktopName || entry?.currentUserId || "-";
         const clientLabel = entry?.clientId || "-";
@@ -1861,6 +1863,48 @@ function renderClientActivityPanel() {
             </tr>
         `;
     }).join("");
+}
+
+function getLatestClientActivityRows(rows) {
+    if (!Array.isArray(rows) || !rows.length) {
+        return [];
+    }
+
+    const sortedRows = rows.slice().sort((left, right) => {
+        const leftMs = Date.parse(String(left?.at || ""));
+        const rightMs = Date.parse(String(right?.at || ""));
+        const safeLeft = Number.isFinite(leftMs) ? leftMs : 0;
+        const safeRight = Number.isFinite(rightMs) ? rightMs : 0;
+        return safeRight - safeLeft;
+    });
+
+    const latestByKey = new Map();
+    sortedRows.forEach((entry) => {
+        const clientId = String(entry?.clientId || "").trim();
+        const userId = String(entry?.currentUserId || "").trim();
+        const desktopName = String(entry?.desktopName || "").trim().toLowerCase();
+        const ipAddress = String(entry?.ipAddress || "").trim();
+        const key = clientId
+            ? `client:${clientId}`
+            : userId
+                ? `user:${userId}`
+                : desktopName
+                    ? `desktop:${desktopName}`
+                    : ipAddress
+                        ? `ip:${ipAddress}`
+                        : `fallback:${String(entry?.at || "")}`;
+        if (!latestByKey.has(key)) {
+            latestByKey.set(key, entry);
+        }
+    });
+
+    return Array.from(latestByKey.values()).sort((left, right) => {
+        const leftMs = Date.parse(String(left?.at || ""));
+        const rightMs = Date.parse(String(right?.at || ""));
+        const safeLeft = Number.isFinite(leftMs) ? leftMs : 0;
+        const safeRight = Number.isFinite(rightMs) ? rightMs : 0;
+        return safeRight - safeLeft;
+    });
 }
 
 function getClientDeviceTitle(client) {
