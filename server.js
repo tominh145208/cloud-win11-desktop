@@ -1687,6 +1687,30 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
+    if (pathname === "/api/limore-stats" && req.method === "GET") {
+        const data = readAdminData();
+        const clients = mergeClientRows(data.clients);
+        const now = Date.now();
+        const onlineCount = clients.filter((client) => {
+            const lastSeen = Date.parse(client?.lastSeenAt || "");
+            return Number.isFinite(lastSeen) && now - lastSeen <= ONLINE_THRESHOLD_MS;
+        }).length;
+
+        const historyRows = Array.isArray(data?.state?.clientHistory) ? data.state.clientHistory : [];
+        const uniqueVisitors = new Set(
+            historyRows.map((row) => String(row?.clientId || "").trim()).filter(Boolean)
+        );
+        const totalVisitors = uniqueVisitors.size || clients.length;
+
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
+        res.end(JSON.stringify({
+            ok: true,
+            online: onlineCount,
+            total: totalVisitors
+        }));
+        return;
+    }
+
     if (pathname === "/api/limore-clients") {
         if (req.method === "GET") {
             if (!isAuthorizedAdmin(req)) {
