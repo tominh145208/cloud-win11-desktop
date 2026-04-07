@@ -1,10 +1,10 @@
-const CACHE_NAME = "limore-cloud-shell-v4";
+const CACHE_NAME = "limore-cloud-shell-v5";
 const SHELL_FILES = [
     "/",
     "/index.html",
-    "/style.css?v=20260407-2",
-    "/script.js?v=20260407-2",
-    "/desktop-enhancements.js?v=20260407-2",
+    "/style.css?v=20260407-3",
+    "/script.js?v=20260407-3",
+    "/desktop-enhancements.js?v=20260407-3",
     "/manifest.webmanifest",
     "/assets/game-cloud.webp",
     "/assets/chrome-custom-v1.png",

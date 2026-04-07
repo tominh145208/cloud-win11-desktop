@@ -95,6 +95,44 @@ async function run() {
   await assertOpen("#volume-button", "#quick-settings", "open", "quick-settings");
   await assertOpen("#controller-menu-toggle", "#controller-menu", "open", "controller-menu");
 
+  await resetFloatingUi();
+  const beforeFilesByTaskbar = await page.evaluate(() => document.querySelectorAll(".app-window").length);
+  await page.click(".taskbar .app-launcher[data-app='files']");
+  await page.waitForTimeout(220);
+  const afterFilesByTaskbar = await page.evaluate(() => ({
+    count: document.querySelectorAll(".app-window").length,
+    hasExplorer: Boolean(document.querySelector(".app-window.thispc-window"))
+  }));
+  if (afterFilesByTaskbar.count <= beforeFilesByTaskbar || !afterFilesByTaskbar.hasExplorer) {
+    errors.push("files-taskbar-not-open");
+  } else {
+    results.push("open-ok: files-from-taskbar");
+  }
+
+  await page.evaluate(() => {
+    const windowEl = document.querySelector(".app-window.thispc-window");
+    if (windowEl) {
+      windowEl.remove();
+    }
+  });
+  await page.waitForTimeout(120);
+
+  await resetFloatingUi();
+  await page.click("#start-button");
+  await page.waitForTimeout(120);
+  const beforeFilesByStart = await page.evaluate(() => document.querySelectorAll(".app-window").length);
+  await page.click("#start-menu .app-launcher[data-app='files']");
+  await page.waitForTimeout(220);
+  const afterFilesByStart = await page.evaluate(() => ({
+    count: document.querySelectorAll(".app-window").length,
+    hasExplorer: Boolean(document.querySelector(".app-window.thispc-window"))
+  }));
+  if (afterFilesByStart.count <= beforeFilesByStart || !afterFilesByStart.hasExplorer) {
+    errors.push("files-start-not-open");
+  } else {
+    results.push("open-ok: files-from-start");
+  }
+
   let gamepadVisible = await page.evaluate(() => {
     const panel = document.getElementById("virtual-gamepad");
     return Boolean(panel) && !panel.classList.contains("hidden");
@@ -113,6 +151,7 @@ async function run() {
     results.push("open-ok: virtual-gamepad");
   }
 
+  await assertOpen("#controller-menu-toggle", "#controller-menu", "open", "controller-menu-toggle-touch");
   await page.click("#toggle-touch-mouse");
   await page.waitForTimeout(150);
   const touchMouseEnabled = await page.evaluate(() => document.body.classList.contains("touch-mouse-mode"));

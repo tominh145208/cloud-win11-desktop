@@ -4872,7 +4872,7 @@ body.mobile-fit .controller-menu-toggle {
     --controller-scale: 1;
     position: fixed;
     inset: 0;
-    z-index: 8280;
+    z-index: 7900;
     pointer-events: none;
 }
 

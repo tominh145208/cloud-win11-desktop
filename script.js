@@ -4487,7 +4487,7 @@ function setVirtualControlPosition(control, nextLeft, nextTop) {
     const scaledHeight = baseHeight * totalScale;
     const halfExtraWidth = Math.max(0, (scaledWidth - baseWidth) / 2);
     const halfExtraHeight = Math.max(0, (scaledHeight - baseHeight) / 2);
-    const bottomReserved = 50;
+    const bottomReserved = isMobileLikeViewport() ? 88 : 50;
     const minLeft = halfExtraWidth;
     const maxLeft = Math.max(minLeft, desktopWidth - baseWidth - halfExtraWidth);
     const minTop = halfExtraHeight;
