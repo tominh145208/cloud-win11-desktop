@@ -9,12 +9,39 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Limore Cloud">
-    <link rel="icon" type="image/webp" href="/assets/game-cloud.webp">
-    <link rel="shortcut icon" type="image/webp" href="/assets/game-cloud.webp">
+    <link rel="icon" type="image/svg+xml" href="/assets/lc-avatar.svg">
+    <link rel="shortcut icon" type="image/svg+xml" href="/assets/lc-avatar.svg">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="assets/chrome-custom-v1.png">
     <link rel="stylesheet" href="style.css?v=20260407-3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        (function redirectIntroPerSession() {
+            const INTRO_SESSION_KEY = "limore_intro_passed_session_v1";
+            const params = new URLSearchParams(window.location.search);
+            const fromIntro = params.get("fromIntro") === "1";
+
+            if (fromIntro) {
+                try {
+                    sessionStorage.setItem(INTRO_SESSION_KEY, "1");
+                } catch (error) {
+                    // Ignore storage write errors and continue loading index.
+                }
+                const cleanPath = window.location.pathname + window.location.hash;
+                window.history.replaceState(null, "", cleanPath);
+                return;
+            }
+
+            try {
+                if (sessionStorage.getItem(INTRO_SESSION_KEY) !== "1") {
+                    window.location.replace("intro.html");
+                }
+            } catch (error) {
+                // If storage is blocked, still force intro page for direct index visits.
+                window.location.replace("intro.html");
+            }
+        })();
+    </script>
 </head>
 <body class="is-booting is-locked">
     <div id="boot-screen" class="boot-screen" aria-hidden="true">

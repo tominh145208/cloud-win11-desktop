@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gioi thieu | Limore Cloud</title>
+    <meta name="theme-color" content="#111111">
+    <link rel="icon" type="image/svg+xml" href="assets/lc-avatar.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-0: #0a0a0a;
+            --bg-1: #111111;
+            --bg-2: #1b1b1b;
+            --line: rgba(255, 255, 255, 0.14);
+            --line-soft: rgba(255, 255, 255, 0.08);
+            --text: #f2f2f2;
+            --sub: #b5b5b5;
+            --accent: #f5c94b;
+            --accent-soft: #f3d880;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100dvh;
+            color: var(--text);
+            font-family: "Manrope", "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at 82% 10%, rgba(245, 201, 75, 0.12), transparent 35%),
+                radial-gradient(circle at 12% 100%, rgba(245, 201, 75, 0.08), transparent 40%),
+                linear-gradient(160deg, var(--bg-0), var(--bg-1) 48%, #0d0d0d);
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .hero-shell {
+            width: 100%;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+        }
+
+        .topbar {
+            height: 74px;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--line-soft);
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--line-soft);
+        }
+
+        .brand-badge img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .brand-copy strong {
+            display: block;
+            font-size: 15px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .brand-copy span {
+            font-size: 12px;
+            color: var(--sub);
+        }
+
+        .topbar-note {
+            color: #ddd;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .topbar-note::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--accent);
+            box-shadow: 0 0 10px rgba(245, 201, 75, 0.6);
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.05fr 0.95fr;
+            gap: 32px;
+            padding: 42px 30px 30px;
+            min-height: calc(100dvh - 74px);
+            align-items: center;
+        }
+
+        .hero-copy {
+            padding: 10px 10px 10px 6px;
+            animation: riseIn 0.55s ease-out both;
+        }
+
+        .kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: "Rajdhani", sans-serif;
+            font-size: 13px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #f6dfa0;
+            border: 1px solid rgba(245, 201, 75, 0.3);
+            border-radius: 999px;
+            padding: 8px 14px;
+            background: rgba(245, 201, 75, 0.1);
+        }
+
+        h1 {
+            margin: 16px 0 14px;
+            font-size: clamp(37px, 5vw, 66px);
+            line-height: 1.02;
+            letter-spacing: -0.02em;
+        }
+
+        h1 .accent {
+            color: var(--accent);
+        }
+
+        .hero-desc {
+            margin: 0;
+            font-size: 17px;
+            line-height: 1.7;
+            color: var(--sub);
+            max-width: 58ch;
+        }
+
+        .stats {
+            margin-top: 26px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .stat {
+            padding: 14px;
+            border: 1px solid var(--line-soft);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .stat strong {
+            display: block;
+            color: var(--accent-soft);
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .stat span {
+            font-size: 12px;
+            color: #a0a0a0;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .intro-actions {
+            margin-top: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn {
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            padding: 12px 24px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: transform 0.18s ease, filter 0.18s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            color: #171717;
+            background: linear-gradient(120deg, #f4c85d, #d5a93d);
+            box-shadow: 0 10px 24px rgba(245, 201, 75, 0.22);
+        }
+
+        .btn-secondary {
+            color: var(--text);
+            background: #1b1b1b;
+            border-color: var(--line);
+        }
+
+        .intro-foot {
+            margin-top: 16px;
+            color: #8c8c8c;
+            font-size: 12px;
+        }
+
+        .intro-foot code {
+            font-family: "Rajdhani", monospace;
+            color: #bcbcbc;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            padding: 2px 6px;
+        }
+
+        .hero-media {
+            animation: riseIn 0.6s 0.08s ease-out both;
+            min-height: 500px;
+        }
+
+        .media-frame {
+            height: 100%;
+            border-radius: 20px;
+            border: 1px solid var(--line-soft);
+            padding: 20px;
+            background:
+                linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01)),
+                #121212;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .media-frame::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.02),
+                rgba(255, 255, 255, 0.02) 1px,
+                transparent 1px,
+                transparent 10px
+            );
+            pointer-events: none;
+        }
+
+        .media-screen {
+            height: 100%;
+            border-radius: 14px;
+            border: 1px solid rgba(245, 201, 75, 0.3);
+            background:
+                radial-gradient(circle at center, rgba(245, 201, 75, 0.16), rgba(245, 201, 75, 0) 45%),
+                linear-gradient(180deg, #202020, #141414 46%, #101010);
+            display: grid;
+            align-content: space-between;
+            padding: 18px;
+            position: relative;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #cbcbcb;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .status-ping {
+            color: var(--accent);
+        }
+
+        .media-center {
+            text-align: center;
+            padding: 30px 12px;
+        }
+
+        .media-center strong {
+            display: block;
+            font-size: 28px;
+            letter-spacing: 0.03em;
+            margin-bottom: 8px;
+        }
+
+        .media-center p {
+            margin: 0;
+            color: #b2b2b2;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .media-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .media-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+            font-size: 13px;
+        }
+
+        .media-list-item span:last-child {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        @keyframes riseIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1040px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+
+            .hero-media {
+                min-height: 360px;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .topbar {
+                height: auto;
+                padding: 14px;
+                gap: 12px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .hero-grid {
+                padding: 22px 14px 22px;
+                gap: 18px;
+                min-height: auto;
+            }
+
+            h1 {
+                font-size: clamp(32px, 10vw, 42px);
+            }
+
+            .hero-desc {
+                font-size: 15px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .intro-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="hero-shell">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-badge">
+                    <img src="assets/lc-avatar.svg" alt="Limore Cloud Avatar">
+                </div>
+                <div class="brand-copy">
+                    <strong>Limore Cloud</strong>
+                    <span>Desktop Gaming Platform</span>
+                </div>
+            </div>
+            <div class="topbar-note">Cloud Gaming 24/24</div>
+        </header>
+
+        <section class="hero-grid">
+            <article class="hero-copy">
+                <span class="kicker">Streaming Experience</span>
+                <h1>
+                    Choi game <span class="accent">AAA</span><br>
+                    do hoa cao<br>
+                    khong can PC manh
+                </h1>
+                <p class="hero-desc">
+                    He thong cloud gaming cho phep ban vao game nhanh, do tre thap va on dinh tren nhieu thiet bi.
+                    Day la trang gioi thieu hien thi o lan dau truy cap.
+                </p>
+
+                <div class="stats">
+                    <div class="stat">
+                        <strong>100+</strong>
+                        <span>Tua game ho tro</span>
+                    </div>
+                    <div class="stat">
+                        <strong>&lt;20ms</strong>
+                        <span>Do tre trung binh</span>
+                    </div>
+                    <div class="stat">
+                        <strong>24/24</strong>
+                        <span>May chu online</span>
+                    </div>
+                </div>
+
+                <div class="intro-actions">
+                    <button id="start-now" class="btn btn-primary" type="button">Bat dau ngay</button>
+                    <button id="skip-intro" class="btn btn-secondary" type="button">Bo qua gioi thieu</button>
+                </div>
+
+                <div class="intro-foot">
+                    Trang nay hien thi moi lan mo lai web. Neu dang o cung mot phien thi chi can vao 1 lan.
+                </div>
+            </article>
+
+            <aside class="hero-media">
+                <div class="media-frame">
+                    <div class="media-screen">
+                        <div class="status-bar">
+                            <span>Session Ready</span>
+                            <span class="status-ping">Ping 18ms</span>
+                        </div>
+
+                        <div class="media-center">
+                            <strong>Game Gateway</strong>
+                            <p>Khoi tao ket noi cloud trong vai giay va vao desktop ngay.</p>
+                        </div>
+
+                        <div class="media-list">
+                            <div class="media-list-item"><span>GPU Node</span><span>Active</span></div>
+                            <div class="media-list-item"><span>Sync Status</span><span>Realtime</span></div>
+                            <div class="media-list-item"><span>Connection</span><span>Stable</span></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script>
+        (function setupIntroPage() {
+            const INTRO_SESSION_KEY = "limore_intro_passed_session_v1";
+            const params = new URLSearchParams(window.location.search);
+            const isPreview = params.get("preview") === "1";
+
+            const goHome = () => {
+                try {
+                    sessionStorage.setItem(INTRO_SESSION_KEY, "1");
+                } catch (error) {
+                    // Continue even if storage is blocked.
+                }
+                window.location.replace("index.html?fromIntro=1");
+            };
+
+            if (!isPreview) {
+                try {
+                    if (sessionStorage.getItem(INTRO_SESSION_KEY) === "1") {
+                        window.location.replace("index.html");
+                        return;
+                    }
+                } catch (error) {
+                    // Stay on intro if storage cannot be read.
+                }
+            }
+
+            document.getElementById("start-now").addEventListener("click", goHome);
+            document.getElementById("skip-intro").addEventListener("click", goHome);
+        })();
+    </script>
+</body>
+</html>
