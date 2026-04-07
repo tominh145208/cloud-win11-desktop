@@ -217,6 +217,50 @@
             border-color: var(--line);
         }
 
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 8, 8, 0.72);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.is-visible {
+            display: flex;
+        }
+
+        .loading-core {
+            display: grid;
+            justify-items: center;
+            gap: 14px;
+        }
+
+        .loading-spinner {
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            border: 4px solid rgba(245, 201, 75, 0.26);
+            border-top-color: var(--accent);
+            animation: spin 0.7s linear infinite;
+            box-shadow: 0 0 26px rgba(245, 201, 75, 0.22);
+        }
+
+        .loading-label {
+            margin: 0;
+            color: #e8d6a0;
+            font-size: 14px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
         .intro-foot {
             margin-top: 16px;
             color: #8c8c8c;
@@ -336,6 +380,15 @@
             to {
                 opacity: 1;
                 transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
             }
         }
 
@@ -463,19 +516,48 @@
             </aside>
         </section>
     </main>
+    <div id="loading-overlay" class="loading-overlay" aria-hidden="true">
+        <div class="loading-core" role="status" aria-live="polite">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <p class="loading-label">Dang khoi tao...</p>
+        </div>
+    </div>
 
     <script>
         (function setupIntroPage() {
             const INTRO_SESSION_KEY = "limore_intro_passed_session_v1";
             const params = new URLSearchParams(window.location.search);
             const isPreview = params.get("preview") === "1";
+            const startButton = document.getElementById("start-now");
+            const skipButton = document.getElementById("skip-intro");
+            const loadingOverlay = document.getElementById("loading-overlay");
+            let isNavigating = false;
 
-            const goHome = () => {
+            const markSessionPassed = () => {
                 try {
                     sessionStorage.setItem(INTRO_SESSION_KEY, "1");
                 } catch (error) {
                     // Continue even if storage is blocked.
                 }
+            };
+
+            const goHome = (withLoading) => {
+                if (isNavigating) return;
+                isNavigating = true;
+                startButton.disabled = true;
+                skipButton.disabled = true;
+
+                if (withLoading) {
+                    loadingOverlay.classList.add("is-visible");
+                    loadingOverlay.setAttribute("aria-hidden", "false");
+                    window.setTimeout(() => {
+                        markSessionPassed();
+                        window.location.replace("index.html?fromIntro=1");
+                    }, 1500);
+                    return;
+                }
+
+                markSessionPassed();
                 window.location.replace("index.html?fromIntro=1");
             };
 
@@ -490,8 +572,8 @@
                 }
             }
 
-            document.getElementById("start-now").addEventListener("click", goHome);
-            document.getElementById("skip-intro").addEventListener("click", goHome);
+            startButton.addEventListener("click", () => goHome(true));
+            skipButton.addEventListener("click", () => goHome(false));
         })();
     </script>
 </body>
