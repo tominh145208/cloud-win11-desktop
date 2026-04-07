@@ -1849,11 +1849,9 @@ const server = http.createServer(async (req, res) => {
             const nextAcceptedUsers = { ...existingAcceptedUsers };
 
             normalizedEvents.forEach((event) => {
-                if (!event.currentUserId) {
-                    return;
-                }
-                const currentEntry = nextAcceptedUsers[event.currentUserId] || {
-                    userId: event.currentUserId,
+                const trackingUserId = String(event.currentUserId || "").trim() || `client:${event.clientId}`;
+                const currentEntry = nextAcceptedUsers[trackingUserId] || {
+                    userId: trackingUserId,
                     desktopName: "",
                     limoreName: "",
                     acceptedAt: "",
@@ -1864,8 +1862,8 @@ const server = http.createServer(async (req, res) => {
                 if (!nextClientIds.includes(event.clientId)) {
                     nextClientIds.push(event.clientId);
                 }
-                nextAcceptedUsers[event.currentUserId] = {
-                    userId: event.currentUserId,
+                nextAcceptedUsers[trackingUserId] = {
+                    userId: trackingUserId,
                     desktopName: event.desktopName || currentEntry.desktopName || "",
                     limoreName: event.limoreName || currentEntry.limoreName || "",
                     acceptedAt: currentEntry.acceptedAt || event.at,
@@ -1983,6 +1981,26 @@ const server = http.createServer(async (req, res) => {
                     rolloutBucket: rollout.bucket,
                     lastSeenAt: new Date().toISOString()
                 };
+                const heartbeatActivityEvents = Array.isArray(payload?.activityEvents)
+                    ? payload.activityEvents
+                        .slice(0, 20)
+                        .map((event) => ({
+                            at: String(event?.at || nextClient.lastSeenAt).trim() || nextClient.lastSeenAt,
+                            clientId: nextClient.clientId,
+                            currentUserId: String(nextClient.currentUserId || "").trim(),
+                            desktopName: String(nextClient.desktopName || "").trim(),
+                            limoreName: String(nextClient.limoreName || "").trim(),
+                            deviceType: String(nextClient.deviceType || "unknown").trim(),
+                            isMobile: Boolean(nextClient.isMobile),
+                            currentPage: String(nextClient.currentPage || "").trim(),
+                            eventType: String(event?.eventType || "heartbeat").trim().slice(0, 64) || "heartbeat",
+                            action: String(event?.action || "").trim().slice(0, 120),
+                            detail: String(event?.detail || "").trim().slice(0, 240),
+                            targetTitle: String(event?.targetTitle || "").trim().slice(0, 120),
+                            ipAddress: clientIp
+                        }))
+                        .filter((event) => Boolean(event.clientId))
+                    : [];
 
                 const nextClientFingerprint = buildClientFingerprint(nextClient);
                 const historyRows = getClientHistory(data);
@@ -2015,6 +2033,7 @@ const server = http.createServer(async (req, res) => {
                         ok: true,
                         blocked: true,
                         blockedByFirewall: true,
+                        activityStored: 0,
                         rollout
                     }));
                     return;
@@ -2034,13 +2053,21 @@ const server = http.createServer(async (req, res) => {
                 }
 
                 const mergedClients = mergeClientRows(currentClients);
+                const existingClientActivityHistory = getClientActivityHistory(data);
+                const nextClientActivityHistory = (nextClient.trackingAccepted && heartbeatActivityEvents.length)
+                    ? [...heartbeatActivityEvents, ...existingClientActivityHistory]
+                        .sort((left, right) => String(right.at || "").localeCompare(String(left.at || "")))
+                        .slice(0, MAX_CLIENT_ACTIVITY_ROWS)
+                    : existingClientActivityHistory;
+                const activityStoredCount = nextClient.trackingAccepted ? heartbeatActivityEvents.length : 0;
 
                 const nextData = {
                     ...data,
                     clients: mergedClients.slice(0, 100),
                     state: {
                         ...(data.state || {}),
-                        clientHistory: nextHistoryRows
+                        clientHistory: nextHistoryRows,
+                        clientActivityHistory: nextClientActivityHistory
                     }
                 };
 
@@ -2093,10 +2120,11 @@ const server = http.createServer(async (req, res) => {
                     }
                 }
 
-                if (nextClient.trackingAccepted && nextClient.currentUserId) {
+                if (nextClient.trackingAccepted) {
                     const acceptedUsers = getTrackingAcceptedUsers(nextData);
-                    const currentAccepted = acceptedUsers[nextClient.currentUserId] || {
-                        userId: nextClient.currentUserId,
+                    const trackingUserId = String(nextClient.currentUserId || "").trim() || `client:${nextClient.clientId}`;
+                    const currentAccepted = acceptedUsers[trackingUserId] || {
+                        userId: trackingUserId,
                         desktopName: "",
                         limoreName: "",
                         acceptedAt: "",
@@ -2111,8 +2139,8 @@ const server = http.createServer(async (req, res) => {
                     }
                     nextData.state.trackingAcceptedUsers = {
                         ...acceptedUsers,
-                        [nextClient.currentUserId]: {
-                            userId: nextClient.currentUserId,
+                        [trackingUserId]: {
+                            userId: trackingUserId,
                             desktopName: nextClient.desktopName || currentAccepted.desktopName || "",
                             limoreName: nextClient.limoreName || currentAccepted.limoreName || "",
                             acceptedAt: currentAccepted.acceptedAt || nextClient.lastSeenAt,
@@ -2129,6 +2157,7 @@ const server = http.createServer(async (req, res) => {
                     ok: true,
                     blocked: blockedClientIds.includes(clientId),
                     blockedByFirewall: false,
+                    activityStored: activityStoredCount,
                     rollout,
                     userLocked
                 }));

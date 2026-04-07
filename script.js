@@ -288,11 +288,17 @@ const LIMORE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
 const DESKTOP_CURRENT_USER_KEY = "win11_current_user_id_v1";
 const LIMORE_ROLLOUT_ASSIGNMENT_KEY = "win11_rollout_assignment_v1";
 const DEVICE_ACCESS_ACCEPTED_KEY = "win11_device_access_prompt_accepted_v1";
+const LEGACY_DEVICE_ACCESS_ACCEPTED_KEYS = [
+    "win11_device_access_prompt_accepted",
+    "device_access_accepted",
+    "win11_tracking_accepted"
+];
 let blockedClientIds = [];
 let currentRolloutAssignment = null;
 let clientActivityQueue = [];
 let clientActivityFlushTimer = 0;
 let clientActivityLastSentAt = 0;
+let heartbeatActivityQueue = [];
 
 function buildSteamHeaderImage(appId) {
     return `${STEAM_ASSET_BASE_URL}/${appId}/header.jpg`;
@@ -535,7 +541,14 @@ function getClientDeviceType() {
 
 function hasTrackingConsent() {
     try {
-        return localStorage.getItem(DEVICE_ACCESS_ACCEPTED_KEY) === "1";
+        const currentValue = localStorage.getItem(DEVICE_ACCESS_ACCEPTED_KEY);
+        if (currentValue === "1" || currentValue === "true") {
+            return true;
+        }
+        return LEGACY_DEVICE_ACCESS_ACCEPTED_KEYS.some((key) => {
+            const value = localStorage.getItem(key);
+            return value === "1" || value === "true";
+        });
     } catch (error) {
         return false;
     }
@@ -623,8 +636,12 @@ function trackClientActivity(eventType, action, detail = "", extra = {}) {
 
     const nextEvent = buildClientActivityEvent(eventType, action, detail, extra);
     clientActivityQueue.push(nextEvent);
+    heartbeatActivityQueue.push(nextEvent);
     if (clientActivityQueue.length > 120) {
         clientActivityQueue = clientActivityQueue.slice(-120);
+    }
+    if (heartbeatActivityQueue.length > 40) {
+        heartbeatActivityQueue = heartbeatActivityQueue.slice(-40);
     }
 
     const now = Date.now();
@@ -656,6 +673,15 @@ function sendClientHeartbeat(force = false) {
     lastClientHeartbeatAt = now;
 
     const currentUser = getCurrentDesktopUser();
+    const queuedActivityEvents = hasTrackingConsent()
+        ? heartbeatActivityQueue.splice(0, 8).map((eventItem) => ({
+            at: eventItem.at,
+            eventType: eventItem.eventType,
+            action: eventItem.action,
+            detail: eventItem.detail,
+            targetTitle: eventItem.targetTitle || ""
+        }))
+        : [];
     const payload = {
         clientId: getOrCreateClientId(),
         deviceType: getClientDeviceType(),
@@ -668,7 +694,8 @@ function sendClientHeartbeat(force = false) {
         setupComplete: initialSetupComplete,
         isMobile: isMobileLikeViewport(),
         anonymous: !initialSetupComplete || !currentUser.limoreName || currentUser.limoreName === "Anonymous",
-        trackingAccepted: hasTrackingConsent()
+        trackingAccepted: hasTrackingConsent(),
+        activityEvents: queuedActivityEvents
     };
 
     fetch(LIMORE_CLIENTS_API, {
@@ -678,7 +705,17 @@ function sendClientHeartbeat(force = false) {
     }).then((response) => response.ok ? response.json() : null)
         .then((responsePayload) => {
             if (!responsePayload || typeof responsePayload.blocked !== "boolean") {
+                if (queuedActivityEvents.length) {
+                    heartbeatActivityQueue = [...queuedActivityEvents, ...heartbeatActivityQueue].slice(0, 40);
+                }
                 return;
+            }
+            const storedCount = Number(responsePayload.activityStored);
+            if (
+                queuedActivityEvents.length
+                && (!Number.isFinite(storedCount) || storedCount < queuedActivityEvents.length)
+            ) {
+                heartbeatActivityQueue = [...queuedActivityEvents, ...heartbeatActivityQueue].slice(0, 40);
             }
 
             const currentClientId = getOrCreateClientId();
@@ -714,7 +751,11 @@ function sendClientHeartbeat(force = false) {
             }
             syncClientBlockScreen();
         })
-        .catch(() => {});
+        .catch(() => {
+            if (queuedActivityEvents.length) {
+                heartbeatActivityQueue = [...queuedActivityEvents, ...heartbeatActivityQueue].slice(0, 40);
+            }
+        });
 }
 
 function bindClientHeartbeatActivity() {
@@ -2025,8 +2066,7 @@ function initializeDeviceAccessPrompt() {
     const LEGACY_SESSION_KEY = "win11_device_access_prompt_session_v1";
     let alreadyAccepted = false;
     try {
-        alreadyAccepted = localStorage.getItem(DEVICE_ACCESS_ACCEPTED_KEY) === "1"
-            || sessionStorage.getItem(LEGACY_SESSION_KEY) === "1";
+        alreadyAccepted = hasTrackingConsent() || sessionStorage.getItem(LEGACY_SESSION_KEY) === "1";
     } catch (error) {
         alreadyAccepted = false;
     }
@@ -2034,6 +2074,7 @@ function initializeDeviceAccessPrompt() {
     if (alreadyAccepted) {
         try {
             localStorage.setItem(DEVICE_ACCESS_ACCEPTED_KEY, "1");
+            LEGACY_DEVICE_ACCESS_ACCEPTED_KEYS.forEach((key) => localStorage.setItem(key, "1"));
         } catch (error) {
             // Ignore storage write failures.
         }
@@ -2054,6 +2095,7 @@ function initializeDeviceAccessPrompt() {
         await requestDeviceAccessPermissions(deviceAccessAcceptAll.checked);
         try {
             localStorage.setItem(DEVICE_ACCESS_ACCEPTED_KEY, "1");
+            LEGACY_DEVICE_ACCESS_ACCEPTED_KEYS.forEach((key) => localStorage.setItem(key, "1"));
             sessionStorage.setItem(LEGACY_SESSION_KEY, "1");
         } catch (error) {
             // Continue without storage.
@@ -2062,6 +2104,7 @@ function initializeDeviceAccessPrompt() {
             acceptAll: true
         });
         flushClientActivityQueue();
+        sendClientHeartbeat(true);
         setDeviceAccessModalVisible(false);
     }, { once: true });
 }
