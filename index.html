@@ -99,6 +99,28 @@
         </div>
     </div>
 
+    <div id="device-access-modal" class="device-access-modal" hidden aria-hidden="true">
+        <div class="device-access-card" role="dialog" aria-modal="true" aria-labelledby="device-access-title">
+            <h3 id="device-access-title">Cap quyen</h3>
+            <p class="device-access-intro">
+                Limore Cloud la he thong cloud gaming giao dien desktop, ho tro mobile va PC de vao game nhanh, on dinh.
+            </p>
+            <details class="device-access-collapse">
+                <summary>Cham de xem noi dung chi tiet</summary>
+                <div class="device-access-collapse-body">
+                    <p>He thong can xac nhan quyen truy cap cho dien thoai hoac PC da duoc phe duyet.</p>
+                </div>
+            </details>
+            <label class="device-access-check">
+                <input id="device-access-accept-all" type="checkbox">
+                <span>Chap nhan tat ca</span>
+            </label>
+            <div class="device-access-actions">
+                <button id="device-access-agree" type="button" disabled>Dong y</button>
+            </div>
+        </div>
+    </div>
+
     <div id="ui-shell">
     <div class="desktop" onclick="closeStart(event)">
         <div id="desktop-icons" class="desktop-icons">
@@ -106,6 +128,7 @@
             <div class="shortcut app-launcher" data-app="recycle"><img src="assets/recycle-bin-custom-v3.png"><span>Recycle Bin</span></div>
             <div class="shortcut app-launcher" data-app="chrome"><img src="https://img.icons8.com/color/48/chrome--v1.png"><span>Chrome</span></div>
             <div class="shortcut app-launcher" data-app="gamecloud"><img src="assets/game-cloud.webp"><span>Limore Cloud</span></div>
+            <div class="shortcut app-launcher" data-app="telegram"><img src="assets/telegram-icon.svg"><span>Telegram</span></div>
         </div>
         <div id="desktop-selection-box" class="desktop-selection-box" hidden></div>
 
@@ -127,6 +150,7 @@
                         <div class="item app-launcher" data-app="files"><img src="https://img.icons8.com/color/48/folder-invoices--v1.png"><span>Files</span></div>
                         <div class="item app-launcher" data-app="chrome"><img src="https://img.icons8.com/color/48/chrome--v1.png"><span>Chrome</span></div>
                         <div class="item app-launcher" data-app="gamecloud"><img src="assets/game-cloud.webp"><span>Limore Cloud</span></div>
+                        <div class="item app-launcher" data-app="telegram"><img src="assets/telegram-icon.svg"><span>Telegram</span></div>
                     </div>
                 </div>
 

@@ -408,6 +408,7 @@
                     </div>
                     <div class="admin-subtab-nav" data-admin-subnav>
                         <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="clients-list">Danh sach thiet bi</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="clients-activity">Theo doi thao tac</button>
                         <button type="button" class="admin-subtab-btn" data-admin-subtab-target="clients-firewall">Tuong lua mini</button>
                         <button type="button" class="admin-subtab-btn" data-admin-subtab-target="clients-deploy">Deploy status</button>
                     </div>
@@ -462,6 +463,46 @@
                     </table>
                 </div>
             </div>
+                    </section>
+
+                    <section class="admin-panel" data-admin-subtab-panel="clients-activity" hidden>
+                        <div class="panel-head">
+                            <h2>Theo doi thao tac nguoi choi</h2>
+                            <p>Chi hien thi tai khoan da chap nhan theo doi. Luu lich su ke ca khi da thoat app.</p>
+                        </div>
+                        <div class="panel-body">
+                            <div class="admin-filter-bar">
+                                <label class="field">
+                                    <span>User ID</span>
+                                    <input id="activity-filter-user" type="text" placeholder="dzminh">
+                                </label>
+                                <label class="field">
+                                    <span>Client ID</span>
+                                    <input id="activity-filter-client" type="text" placeholder="client-...">
+                                </label>
+                                <label class="field">
+                                    <span>Hanh dong</span>
+                                    <input id="activity-filter-action" type="text" placeholder="open_app / click">
+                                </label>
+                                <button id="activity-filter-reset-button" type="button" class="admin-btn">Xoa loc</button>
+                            </div>
+                            <div id="activity-live-users" class="simple-list"></div>
+                            <div class="games-table-wrap">
+                                <table class="games-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Thoi gian</th>
+                                            <th>User / Client</th>
+                                            <th>Thiet bi</th>
+                                            <th>Hanh dong</th>
+                                            <th>Trang / App</th>
+                                            <th>Trang thai</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="client-activity-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </section>
 
                     <section class="admin-panel" data-admin-subtab-panel="clients-firewall" hidden>

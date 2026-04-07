@@ -12,6 +12,7 @@ const ADMIN_FIREWALL_API = "/api/admin-firewall";
 const ADMIN_DEVICES_DEDUPE_API = "/api/admin-devices/dedupe";
 const ADMIN_DEVICES_EXPORT_API = "/api/admin-devices/export";
 const ADMIN_DEVICE_DETAIL_API = "/api/admin-devices/detail";
+const ADMIN_CLIENT_ACTIVITY_API = "/api/admin-client-activity";
 const ADMIN_ALERTS_API = "/api/admin-alerts";
 const ADMIN_DASHBOARD_API = "/api/admin-dashboard";
 const ADMIN_ROLLOUT_API = "/api/admin-rollout";
@@ -112,6 +113,8 @@ const defaultState = {
     firewallRules: [],
     ipAlerts: [],
     clientHistory: [],
+    clientActivityHistory: [],
+    trackingAcceptedUsers: {},
     knownIpsByUser: {},
     syncSignal: "",
     deployStatus: {
@@ -214,6 +217,12 @@ const clientFilterUser = document.getElementById("client-filter-user");
 const clientFilterResetButton = document.getElementById("client-filter-reset-button");
 const dedupeClientsButton = document.getElementById("dedupe-clients-button");
 const exportClientsCsvButton = document.getElementById("export-clients-csv-button");
+const activityFilterUserInput = document.getElementById("activity-filter-user");
+const activityFilterClientInput = document.getElementById("activity-filter-client");
+const activityFilterActionInput = document.getElementById("activity-filter-action");
+const activityFilterResetButton = document.getElementById("activity-filter-reset-button");
+const activityLiveUsers = document.getElementById("activity-live-users");
+const clientActivityTableBody = document.getElementById("client-activity-table-body");
 const rolloutEnabledInput = document.getElementById("rollout-enabled-input");
 const rolloutPercentInput = document.getElementById("rollout-percent-input");
 const rolloutPercentValue = document.getElementById("rollout-percent-value");
@@ -243,6 +252,9 @@ const manageUsersPanels = Array.from(document.querySelectorAll("[data-user-panel
 
 let adminData = loadAdminData();
 let clientRows = [];
+let clientActivityRows = [];
+let trackingAcceptedUsers = [];
+let liveTrackingUsers = [];
 let adminToken = "";
 let adminLiveSyncTimer = 0;
 let activeAdminSection = loadStoredAdminSection();
@@ -269,6 +281,11 @@ const clientFilters = {
     device: "all",
     ip: "",
     user: ""
+};
+const activityFilters = {
+    user: "",
+    client: "",
+    action: ""
 };
 const userFilters = {
     search: "",
@@ -628,6 +645,10 @@ function mergeAdminData(rawData = {}) {
                 : [],
             ipAlerts: Array.isArray(rawData?.state?.ipAlerts) ? rawData.state.ipAlerts : [],
             clientHistory: Array.isArray(rawData?.state?.clientHistory) ? rawData.state.clientHistory : [],
+            clientActivityHistory: Array.isArray(rawData?.state?.clientActivityHistory) ? rawData.state.clientActivityHistory : [],
+            trackingAcceptedUsers: rawData?.state?.trackingAcceptedUsers && typeof rawData.state.trackingAcceptedUsers === "object"
+                ? rawData.state.trackingAcceptedUsers
+                : {},
             knownIpsByUser: rawData?.state?.knownIpsByUser && typeof rawData.state.knownIpsByUser === "object"
                 ? rawData.state.knownIpsByUser
                 : {},
@@ -818,6 +839,44 @@ async function fetchClientRows() {
         }
         clientRows = Array.isArray(adminData.clients) ? adminData.clients : [];
         handleRealtimeClientJoin(clientRows);
+    }
+}
+
+async function fetchClientActivityRows() {
+    try {
+        const query = new URLSearchParams();
+        if (activityFilters.user) {
+            query.set("userId", activityFilters.user);
+        }
+        if (activityFilters.client) {
+            query.set("clientId", activityFilters.client);
+        }
+        if (activityFilters.action) {
+            query.set("action", activityFilters.action);
+        }
+        query.set("limit", "350");
+        const queryText = query.toString();
+        const response = await fetch(`${buildNoCacheUrl(ADMIN_CLIENT_ACTIVITY_API)}${queryText ? `&${queryText}` : ""}`, {
+            cache: "no-store",
+            headers: getAuthHeaders(false)
+        });
+        if (response.status === 401) {
+            throw new Error("admin_auth_required");
+        }
+        if (!response.ok) {
+            throw new Error("Could not load client activity");
+        }
+        const payload = await response.json();
+        clientActivityRows = Array.isArray(payload?.activities) ? payload.activities : [];
+        trackingAcceptedUsers = Array.isArray(payload?.acceptedUsers) ? payload.acceptedUsers : [];
+        liveTrackingUsers = Array.isArray(payload?.liveUsers) ? payload.liveUsers : [];
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            throw error;
+        }
+        clientActivityRows = [];
+        trackingAcceptedUsers = [];
+        liveTrackingUsers = [];
     }
 }
 
@@ -1682,6 +1741,7 @@ function renderClientsTable() {
                 ? new Date(client.lastSeenAt).toLocaleString("vi-VN")
                 : "-";
             const identityStatus = client.anonymous ? "An danh" : "Da nhan dien";
+            const trackingStatus = client.trackingAccepted ? "Da chap nhan" : identityStatus;
             const deviceTitle = getClientDeviceTitle(client);
             const deviceMeta = getClientDeviceMeta(client);
             const desktopName = client.desktopName || "-";
@@ -1707,7 +1767,7 @@ function renderClientsTable() {
                     <td>
                         <div class="client-status-stack">
                             <span class="status-pill ${isOnline ? "is-online" : "is-offline"}">${isOnline ? "Online" : "Offline"}</span>
-                            <span class="status-pill ${isBlocked ? "is-blocked" : ""}">${isBlocked ? "Bi ngat" : identityStatus}</span>
+                            <span class="status-pill ${isBlocked ? "is-blocked" : ""}">${isBlocked ? "Bi ngat" : trackingStatus}</span>
                         </div>
                     </td>
                     <td>${lastSeen}</td>
@@ -1725,6 +1785,82 @@ function renderClientsTable() {
                 </tr>
             `;
         }).join("");
+}
+
+function renderClientActivityPanel() {
+    if (activityLiveUsers) {
+        const acceptedCount = trackingAcceptedUsers.length;
+        const onlineCount = liveTrackingUsers.filter((entry) => Boolean(entry?.online)).length;
+        if (!acceptedCount) {
+            activityLiveUsers.innerHTML = `
+                <div class="simple-list-item">
+                    <strong>Chua co tai khoan nao chap nhan theo doi</strong>
+                    <span>Khi user bam "Dong y" o popup truy cap, du lieu thao tac se hien o day.</span>
+                </div>
+            `;
+        } else {
+            activityLiveUsers.innerHTML = `
+                <div class="simple-list-item">
+                    <strong>Da chap nhan theo doi: ${acceptedCount} tai khoan</strong>
+                    <span>Dang online: ${onlineCount}. Du lieu van duoc luu de xem lai khi nguoi choi da thoat app.</span>
+                </div>
+                ${liveTrackingUsers.slice(0, 8).map((entry) => `
+                    <div class="simple-list-item">
+                        <strong>${entry.desktopName || entry.userId || "-"}</strong>
+                        <span>User: ${entry.userId || "-"} • App: ${entry.activeAppId || "-"} • Trang: ${entry.currentPage || "/"} • ${entry.online ? "Online" : "Offline"}</span>
+                    </div>
+                `).join("")}
+            `;
+        }
+    }
+
+    if (!clientActivityTableBody) {
+        return;
+    }
+
+    if (!clientActivityRows.length) {
+        clientActivityTableBody.innerHTML = `
+            <tr>
+                <td colspan="6">Chua co thao tac nao duoc ghi nhan tu tai khoan da chap nhan.</td>
+            </tr>
+        `;
+        return;
+    }
+
+    clientActivityTableBody.innerHTML = clientActivityRows.map((entry) => {
+        const atLabel = entry?.at ? new Date(entry.at).toLocaleString("vi-VN") : "-";
+        const userLabel = entry?.desktopName || entry?.currentUserId || "-";
+        const clientLabel = entry?.clientId || "-";
+        const deviceLabel = entry?.isMobile ? "Mobile" : "Desktop";
+        const actionLabel = [entry?.eventType, entry?.action].filter(Boolean).join(" / ") || "-";
+        const detailLabel = entry?.detail || entry?.targetTitle || "-";
+        const livePage = entry?.liveCurrentPage || entry?.currentPage || "/";
+        const activeApp = entry?.activeAppId || "-";
+        return `
+            <tr>
+                <td>${atLabel}</td>
+                <td>
+                    <div class="client-primary">${userLabel}</div>
+                    <div class="client-secondary">${entry?.currentUserId || "-"} • ${clientLabel}</div>
+                </td>
+                <td>
+                    <div class="client-primary">${deviceLabel}</div>
+                    <div class="client-secondary">${entry?.deviceType || "-"}</div>
+                </td>
+                <td>
+                    <div class="client-primary">${actionLabel}</div>
+                    <div class="client-secondary">${detailLabel}</div>
+                </td>
+                <td>
+                    <div class="client-primary">${livePage}</div>
+                    <div class="client-secondary">App: ${activeApp}</div>
+                </td>
+                <td>
+                    <span class="status-pill ${entry?.online ? "is-online" : "is-offline"}">${entry?.online ? "Online" : "Offline"}</span>
+                </td>
+            </tr>
+        `;
+    }).join("");
 }
 
 function getClientDeviceTitle(client) {
@@ -1851,12 +1987,14 @@ function mergeClientRows(clients) {
             deviceType: String(client?.deviceType || "unknown").trim() || "unknown",
             userAgent: String(client?.userAgent || ""),
             currentPage: String(client?.currentPage || ""),
+            activeAppId: String(client?.activeAppId || ""),
             desktopName: String(client?.desktopName || ""),
             limoreName: String(client?.limoreName || ""),
             currentUserId: String(client?.currentUserId || ""),
             setupComplete: Boolean(client?.setupComplete),
             isMobile: Boolean(client?.isMobile),
             anonymous: Boolean(client?.anonymous),
+            trackingAccepted: Boolean(client?.trackingAccepted),
             lastSeenAt: String(client?.lastSeenAt || "")
         }))
         .filter((client) => client.clientId || client.ipAddress || client.userAgent || client.lastSeenAt)
@@ -1893,6 +2031,7 @@ function renderAll() {
     renderPackagesForm();
     renderUsersTable();
     renderClientsTable();
+    renderClientActivityPanel();
     renderRoleUsersTable();
     renderAuditLogs();
     renderAlerts();
@@ -2919,6 +3058,19 @@ async function handleDeleteRoleUser(username) {
     }
 }
 
+async function refreshClientActivityPanel() {
+    try {
+        await fetchClientActivityRows();
+        renderClientActivityPanel();
+    } catch (error) {
+        if (error.message === "admin_auth_required") {
+            storeAdminToken("");
+            setAdminLockedState("Phien admin da het han. Vui long dang nhap lai.");
+            return;
+        }
+    }
+}
+
 async function loadAdminDashboard() {
     await fetchAdminDataFromServer();
     try {
@@ -2929,6 +3081,7 @@ async function loadAdminDashboard() {
             fetchAuditLogs(),
             fetchAlerts(),
             fetchFirewallRules(),
+            fetchClientActivityRows(),
             fetchDashboardStats(),
             fetchDeployStatus()
         ]);
@@ -2955,6 +3108,7 @@ function startAdminLiveSync() {
                 fetchAuditLogs(),
                 fetchAlerts(),
                 fetchFirewallRules(),
+                fetchClientActivityRows(),
                 fetchDashboardStats(),
                 fetchRoleUsers(),
                 fetchDeployStatus()
@@ -3173,6 +3327,18 @@ clientFilterUser?.addEventListener("input", () => {
     clientFilters.user = clientFilterUser.value.trim();
     renderClientsTable();
 });
+activityFilterUserInput?.addEventListener("input", () => {
+    activityFilters.user = activityFilterUserInput.value.trim();
+    refreshClientActivityPanel();
+});
+activityFilterClientInput?.addEventListener("input", () => {
+    activityFilters.client = activityFilterClientInput.value.trim();
+    refreshClientActivityPanel();
+});
+activityFilterActionInput?.addEventListener("input", () => {
+    activityFilters.action = activityFilterActionInput.value.trim();
+    refreshClientActivityPanel();
+});
 userSearchInput?.addEventListener("input", () => {
     userFilters.search = userSearchInput.value.trim();
     renderUsersTable();
@@ -3218,6 +3384,21 @@ clientFilterResetButton?.addEventListener("click", () => {
         clientFilterUser.value = "";
     }
     renderClientsTable();
+});
+activityFilterResetButton?.addEventListener("click", () => {
+    activityFilters.user = "";
+    activityFilters.client = "";
+    activityFilters.action = "";
+    if (activityFilterUserInput) {
+        activityFilterUserInput.value = "";
+    }
+    if (activityFilterClientInput) {
+        activityFilterClientInput.value = "";
+    }
+    if (activityFilterActionInput) {
+        activityFilterActionInput.value = "";
+    }
+    refreshClientActivityPanel();
 });
 clientsTableBody?.addEventListener("click", (event) => {
     const toggleButton = event.target.closest('[data-action="toggle-client-block"]');

@@ -32,6 +32,7 @@ const DEFAULT_DEPLOY_STATUS = Object.freeze({
     note: "",
     source: "server"
 });
+const MAX_CLIENT_ACTIVITY_ROWS = 30000;
 
 const MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -471,12 +472,14 @@ function mergeClientRows(clients) {
             deviceType: String(client?.deviceType || "unknown").trim() || "unknown",
             userAgent: String(client?.userAgent || ""),
             currentPage: String(client?.currentPage || ""),
+            activeAppId: String(client?.activeAppId || ""),
             desktopName: String(client?.desktopName || ""),
             limoreName: String(client?.limoreName || ""),
             currentUserId: String(client?.currentUserId || ""),
             setupComplete: Boolean(client?.setupComplete),
             isMobile: Boolean(client?.isMobile),
             anonymous: Boolean(client?.anonymous),
+            trackingAccepted: Boolean(client?.trackingAccepted),
             rolloutChannel: String(client?.rolloutChannel || ""),
             rolloutVersion: String(client?.rolloutVersion || ""),
             rolloutBucket: Number(client?.rolloutBucket) || 0,
@@ -556,6 +559,54 @@ function getClientHistory(data) {
             }))
             .filter((entry) => entry.at)
         : [];
+}
+
+function getClientActivityHistory(data) {
+    return Array.isArray(data?.state?.clientActivityHistory)
+        ? data.state.clientActivityHistory
+            .map((entry) => ({
+                at: String(entry?.at || ""),
+                clientId: String(entry?.clientId || "").trim(),
+                currentUserId: String(entry?.currentUserId || "").trim(),
+                desktopName: String(entry?.desktopName || "").trim(),
+                limoreName: String(entry?.limoreName || "").trim(),
+                deviceType: String(entry?.deviceType || "unknown").trim() || "unknown",
+                isMobile: Boolean(entry?.isMobile),
+                currentPage: String(entry?.currentPage || "").trim(),
+                eventType: String(entry?.eventType || "unknown").trim() || "unknown",
+                action: String(entry?.action || "").trim(),
+                detail: String(entry?.detail || "").trim(),
+                targetTitle: String(entry?.targetTitle || "").trim(),
+                ipAddress: String(entry?.ipAddress || "").trim()
+            }))
+            .filter((entry) => entry.at && entry.clientId)
+        : [];
+}
+
+function getTrackingAcceptedUsers(data) {
+    const raw = data?.state?.trackingAcceptedUsers;
+    if (!raw || typeof raw !== "object") {
+        return {};
+    }
+    const normalized = {};
+    Object.entries(raw).forEach(([userIdRaw, value]) => {
+        const userId = String(userIdRaw || "").trim();
+        if (!userId) {
+            return;
+        }
+        const clientIds = Array.isArray(value?.clientIds)
+            ? value.clientIds.map((id) => String(id || "").trim()).filter(Boolean)
+            : [];
+        normalized[userId] = {
+            userId,
+            desktopName: String(value?.desktopName || "").trim(),
+            limoreName: String(value?.limoreName || "").trim(),
+            acceptedAt: String(value?.acceptedAt || "").trim(),
+            lastSeenAt: String(value?.lastSeenAt || "").trim(),
+            clientIds: Array.from(new Set(clientIds)).slice(0, 40)
+        };
+    });
+    return normalized;
 }
 
 function getKnownIpsByUser(data) {
@@ -677,7 +728,7 @@ function toCsvValue(value) {
 }
 
 function buildClientsCsv(clients) {
-    const rows = [["clientId", "deviceType", "desktopName", "limoreName", "currentUserId", "ipAddress", "currentPage", "isMobile", "anonymous", "lastSeenAt", "userAgent"]];
+    const rows = [["clientId", "deviceType", "desktopName", "limoreName", "currentUserId", "ipAddress", "currentPage", "activeAppId", "trackingAccepted", "isMobile", "anonymous", "lastSeenAt", "userAgent"]];
     (Array.isArray(clients) ? clients : []).forEach((client) => {
         rows.push([
             client.clientId || "",
@@ -687,6 +738,8 @@ function buildClientsCsv(clients) {
             client.currentUserId || "",
             client.ipAddress || "",
             client.currentPage || "",
+            client.activeAppId || "",
+            client.trackingAccepted ? "1" : "0",
             client.isMobile ? "1" : "0",
             client.anonymous ? "1" : "0",
             client.lastSeenAt || "",
@@ -1259,6 +1312,101 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    if (pathname === "/api/admin-client-activity" && req.method === "GET") {
+        if (!isAuthorizedAdmin(req)) {
+            res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Unauthorized" }));
+            return;
+        }
+
+        const data = readAdminData();
+        const userIdFilter = String(reqUrl.searchParams.get("userId") || "").trim().toLowerCase();
+        const clientIdFilter = String(reqUrl.searchParams.get("clientId") || "").trim().toLowerCase();
+        const actionFilter = String(reqUrl.searchParams.get("action") || "").trim().toLowerCase();
+        const limitRaw = Number(reqUrl.searchParams.get("limit") || 250);
+        const limit = Number.isFinite(limitRaw) ? Math.max(50, Math.min(1000, Math.round(limitRaw))) : 250;
+        const now = Date.now();
+        const clients = mergeClientRows(data.clients);
+        const clientsById = new Map();
+        clients.forEach((client) => {
+            const clientId = String(client?.clientId || "").trim();
+            if (clientId) {
+                clientsById.set(clientId, client);
+            }
+        });
+
+        const activities = getClientActivityHistory(data)
+            .sort((left, right) => String(right.at || "").localeCompare(String(left.at || "")))
+            .filter((entry) => {
+                const entryUser = String(entry.currentUserId || "").toLowerCase();
+                const entryClient = String(entry.clientId || "").toLowerCase();
+                const entryAction = `${entry.eventType || ""} ${entry.action || ""} ${entry.detail || ""}`.toLowerCase();
+                if (userIdFilter && !entryUser.includes(userIdFilter)) {
+                    return false;
+                }
+                if (clientIdFilter && !entryClient.includes(clientIdFilter)) {
+                    return false;
+                }
+                if (actionFilter && !entryAction.includes(actionFilter)) {
+                    return false;
+                }
+                return true;
+            })
+            .slice(0, limit)
+            .map((entry) => {
+                const liveClient = clientsById.get(entry.clientId);
+                const lastSeenMs = liveClient?.lastSeenAt ? new Date(liveClient.lastSeenAt).getTime() : 0;
+                const online = lastSeenMs > 0 && now - lastSeenMs <= ONLINE_THRESHOLD_MS;
+                return {
+                    ...entry,
+                    online,
+                    liveCurrentPage: String(liveClient?.currentPage || entry.currentPage || ""),
+                    activeAppId: String(liveClient?.activeAppId || ""),
+                    lastSeenAt: String(liveClient?.lastSeenAt || "")
+                };
+            });
+
+        const acceptedUsers = Object.values(getTrackingAcceptedUsers(data))
+            .sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")));
+
+        const liveUsersMap = new Map();
+        clients.forEach((client) => {
+            const userId = String(client?.currentUserId || "").trim();
+            if (!userId || !client?.trackingAccepted) {
+                return;
+            }
+            const existing = liveUsersMap.get(userId);
+            const lastSeenAt = String(client?.lastSeenAt || "");
+            if (!existing || lastSeenAt > existing.lastSeenAt) {
+                liveUsersMap.set(userId, {
+                    userId,
+                    desktopName: String(client?.desktopName || ""),
+                    limoreName: String(client?.limoreName || ""),
+                    clientId: String(client?.clientId || ""),
+                    currentPage: String(client?.currentPage || ""),
+                    activeAppId: String(client?.activeAppId || ""),
+                    lastSeenAt
+                });
+            }
+        });
+        const liveUsers = Array.from(liveUsersMap.values()).map((entry) => {
+            const seenMs = entry.lastSeenAt ? new Date(entry.lastSeenAt).getTime() : 0;
+            return {
+                ...entry,
+                online: seenMs > 0 && now - seenMs <= ONLINE_THRESHOLD_MS
+            };
+        }).sort((left, right) => String(right.lastSeenAt || "").localeCompare(String(left.lastSeenAt || "")));
+
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-cache" });
+        res.end(JSON.stringify({
+            ok: true,
+            activities,
+            acceptedUsers,
+            liveUsers
+        }));
+        return;
+    }
+
     if (pathname === "/api/admin-sync" && req.method === "POST") {
         if (!isAuthorizedAdmin(req)) {
             res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
@@ -1651,6 +1799,103 @@ const server = http.createServer(async (req, res) => {
         }
     }
 
+    if (pathname === "/api/limore-client-activity" && req.method === "POST") {
+        try {
+            const payload = await parseJsonBody(req);
+            const trackingAccepted = Boolean(payload?.trackingAccepted);
+            if (!trackingAccepted) {
+                res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({ ok: true, ignored: true }));
+                return;
+            }
+
+            const rawEvents = Array.isArray(payload?.events) ? payload.events : [];
+            const clientIp = getClientIp(req);
+            const nowIso = new Date().toISOString();
+            const normalizedEvents = rawEvents
+                .slice(0, 80)
+                .map((event) => {
+                    const clientId = String(event?.clientId || "").trim();
+                    if (!clientId) {
+                        return null;
+                    }
+                    return {
+                        at: String(event?.at || nowIso).trim() || nowIso,
+                        clientId,
+                        currentUserId: String(event?.currentUserId || "").trim(),
+                        desktopName: String(event?.desktopName || "").trim(),
+                        limoreName: String(event?.limoreName || "").trim(),
+                        deviceType: String(event?.deviceType || "unknown").trim() || "unknown",
+                        isMobile: Boolean(event?.isMobile),
+                        currentPage: String(event?.currentPage || "").trim(),
+                        eventType: String(event?.eventType || "unknown").trim().slice(0, 64) || "unknown",
+                        action: String(event?.action || "").trim().slice(0, 120),
+                        detail: String(event?.detail || "").trim().slice(0, 240),
+                        targetTitle: String(event?.targetTitle || "").trim().slice(0, 120),
+                        ipAddress: clientIp
+                    };
+                })
+                .filter(Boolean);
+
+            if (!normalizedEvents.length) {
+                res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                res.end(JSON.stringify({ ok: true, ignored: true }));
+                return;
+            }
+
+            const data = readAdminData();
+            const existingHistory = getClientActivityHistory(data);
+            const existingAcceptedUsers = getTrackingAcceptedUsers(data);
+            const nextAcceptedUsers = { ...existingAcceptedUsers };
+
+            normalizedEvents.forEach((event) => {
+                if (!event.currentUserId) {
+                    return;
+                }
+                const currentEntry = nextAcceptedUsers[event.currentUserId] || {
+                    userId: event.currentUserId,
+                    desktopName: "",
+                    limoreName: "",
+                    acceptedAt: "",
+                    lastSeenAt: "",
+                    clientIds: []
+                };
+                const nextClientIds = Array.isArray(currentEntry.clientIds) ? currentEntry.clientIds.slice() : [];
+                if (!nextClientIds.includes(event.clientId)) {
+                    nextClientIds.push(event.clientId);
+                }
+                nextAcceptedUsers[event.currentUserId] = {
+                    userId: event.currentUserId,
+                    desktopName: event.desktopName || currentEntry.desktopName || "",
+                    limoreName: event.limoreName || currentEntry.limoreName || "",
+                    acceptedAt: currentEntry.acceptedAt || event.at,
+                    lastSeenAt: event.at || currentEntry.lastSeenAt || "",
+                    clientIds: Array.from(new Set(nextClientIds)).slice(0, 40)
+                };
+            });
+
+            const nextHistory = [...normalizedEvents, ...existingHistory]
+                .sort((left, right) => String(right.at || "").localeCompare(String(left.at || "")))
+                .slice(0, MAX_CLIENT_ACTIVITY_ROWS);
+            const nextData = {
+                ...data,
+                state: {
+                    ...(data.state || {}),
+                    clientActivityHistory: nextHistory,
+                    trackingAcceptedUsers: nextAcceptedUsers
+                }
+            };
+            writeAdminData(nextData);
+
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: true, stored: normalizedEvents.length }));
+        } catch (error) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "Invalid JSON payload" }));
+        }
+        return;
+    }
+
     if (pathname === "/api/limore-stats" && req.method === "GET") {
         const data = readAdminData();
         const clients = mergeClientRows(data.clients);
@@ -1725,12 +1970,14 @@ const server = http.createServer(async (req, res) => {
                     deviceType: String(payload.deviceType || "unknown"),
                     userAgent: String(payload.userAgent || ""),
                     currentPage: String(payload.currentPage || ""),
+                    activeAppId: String(payload.activeAppId || ""),
                     desktopName: String(payload.desktopName || ""),
                     limoreName: String(payload.limoreName || ""),
                     currentUserId: String(payload.currentUserId || ""),
                     setupComplete: Boolean(payload.setupComplete),
                     isMobile: Boolean(payload.isMobile),
                     anonymous: Boolean(payload.anonymous),
+                    trackingAccepted: Boolean(payload.trackingAccepted),
                     rolloutChannel: rollout.channel,
                     rolloutVersion: rollout.assignedVersion,
                     rolloutBucket: rollout.bucket,
@@ -1844,6 +2091,35 @@ const server = http.createServer(async (req, res) => {
                             ].slice(0, 300);
                         }
                     }
+                }
+
+                if (nextClient.trackingAccepted && nextClient.currentUserId) {
+                    const acceptedUsers = getTrackingAcceptedUsers(nextData);
+                    const currentAccepted = acceptedUsers[nextClient.currentUserId] || {
+                        userId: nextClient.currentUserId,
+                        desktopName: "",
+                        limoreName: "",
+                        acceptedAt: "",
+                        lastSeenAt: "",
+                        clientIds: []
+                    };
+                    const acceptedClientIds = Array.isArray(currentAccepted.clientIds)
+                        ? currentAccepted.clientIds.slice()
+                        : [];
+                    if (!acceptedClientIds.includes(nextClient.clientId)) {
+                        acceptedClientIds.push(nextClient.clientId);
+                    }
+                    nextData.state.trackingAcceptedUsers = {
+                        ...acceptedUsers,
+                        [nextClient.currentUserId]: {
+                            userId: nextClient.currentUserId,
+                            desktopName: nextClient.desktopName || currentAccepted.desktopName || "",
+                            limoreName: nextClient.limoreName || currentAccepted.limoreName || "",
+                            acceptedAt: currentAccepted.acceptedAt || nextClient.lastSeenAt,
+                            lastSeenAt: nextClient.lastSeenAt,
+                            clientIds: Array.from(new Set(acceptedClientIds)).slice(0, 40)
+                        }
+                    };
                 }
 
                 const blockedClientIds = getBlockedClientIds(nextData);

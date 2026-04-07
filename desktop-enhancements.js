@@ -66,13 +66,14 @@
         { id: "desktop-thispc", appId: "thispc", title: "This PC", icon: "assets/this-pc-custom-v3.png", system: true, hidden: false, x: 20, y: 20 },
         { id: "desktop-recycle", appId: "recycle", title: "Recycle Bin", icon: "assets/recycle-bin-custom-v3.png", system: true, hidden: false, x: 20, y: 128 },
         { id: "desktop-chrome", appId: "chrome", title: "Chrome", icon: "https://img.icons8.com/color/48/chrome--v1.png", system: false, hidden: false, x: 20, y: 236 },
-        { id: "desktop-gamecloud", appId: "gamecloud", title: "Limore Cloud", icon: "assets/game-cloud.webp", system: false, hidden: false, x: 20, y: 344 }
+        { id: "desktop-gamecloud", appId: "gamecloud", title: "Limore Cloud", icon: "assets/game-cloud.webp", system: false, hidden: false, x: 20, y: 344 },
+        { id: "desktop-telegram", appId: "telegram", title: "Telegram", icon: "assets/telegram-icon.svg", system: false, hidden: false, x: 20, y: 452 }
     ];
 
     let desktopIconsState = loadJson(ICONS_KEY, desktopDefaults);
     let recycleBinItems = loadJson(RECYCLE_KEY, []);
     let notificationItems = loadJson(NOTIFY_KEY, []);
-    let pinnedStartApps = loadJson(PINS_KEY, ["edge", "word", "settings", "files", "chrome", "gamecloud"]);
+    let pinnedStartApps = loadJson(PINS_KEY, ["edge", "word", "settings", "files", "chrome", "gamecloud", "telegram"]);
     let systemSettings = loadJson(SETTINGS_KEY, {
         wifi: true,
         bluetooth: true,
@@ -248,6 +249,52 @@
 
     function saveSettings() {
         saveJson(SETTINGS_KEY, systemSettings);
+    }
+
+    function ensureDesktopShortcut(itemTemplate) {
+        const existing = desktopIconsState.find((item) => item.id === itemTemplate.id || item.appId === itemTemplate.appId);
+        if (existing) {
+            let changed = false;
+            if (existing.hidden) {
+                existing.hidden = false;
+                changed = true;
+            }
+            if (!existing.icon) {
+                existing.icon = itemTemplate.icon;
+                changed = true;
+            }
+            if (!existing.title) {
+                existing.title = itemTemplate.title;
+                changed = true;
+            }
+            return changed;
+        }
+        desktopIconsState.push({ ...itemTemplate });
+        return true;
+    }
+
+    function ensureEnhancedDesktopDefaults() {
+        let changed = false;
+        changed = ensureDesktopShortcut({
+            id: "desktop-telegram",
+            appId: "telegram",
+            title: "Telegram",
+            icon: "assets/telegram-icon.svg",
+            system: false,
+            hidden: false,
+            x: 20,
+            y: 452
+        }) || changed;
+
+        if (!pinnedStartApps.includes("telegram")) {
+            pinnedStartApps.push("telegram");
+            changed = true;
+        }
+
+        if (changed) {
+            saveDesktopIcons();
+            savePins();
+        }
     }
 
     function getDesktopItem(itemId) {
@@ -1038,6 +1085,7 @@
 
     function initializeEnhancements() {
         setRunDialogVisibility(false);
+        ensureEnhancedDesktopDefaults();
         arrangeDesktopIcons();
         renderDesktopIcons();
         renderPinnedStartApps();

@@ -108,6 +108,39 @@
             box-shadow: 0 0 10px rgba(245, 201, 75, 0.6);
         }
 
+        .topbar-right {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .telegram-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--line-soft);
+            background: rgba(255, 255, 255, 0.04);
+            color: #e8eef6;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .telegram-link:hover {
+            filter: brightness(1.08);
+            border-color: rgba(255, 255, 255, 0.24);
+        }
+
+        .telegram-link img {
+            width: 18px;
+            height: 18px;
+            border-radius: 5px;
+            flex-shrink: 0;
+        }
+
         .hero-grid {
             display: grid;
             grid-template-columns: 1.05fr 0.95fr;
@@ -413,6 +446,11 @@
                 align-items: flex-start;
             }
 
+            .topbar-right {
+                width: 100%;
+                justify-content: space-between;
+            }
+
             .hero-grid {
                 padding: 22px 14px 22px;
                 gap: 18px;
@@ -453,7 +491,13 @@
                     <span>Desktop Gaming Platform</span>
                 </div>
             </div>
-            <div class="topbar-note">Cloud Gaming 24/24</div>
+            <div class="topbar-right">
+                <div class="topbar-note">Cloud Gaming 24/24</div>
+                <a class="telegram-link" href="https://t.me/limorecloudgame" target="_blank" rel="noopener noreferrer">
+                    <img src="assets/telegram-icon.svg" alt="Telegram">
+                    <span>Telegram</span>
+                </a>
+            </div>
         </header>
 
         <section class="hero-grid">

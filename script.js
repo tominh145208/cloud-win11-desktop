@@ -19,6 +19,9 @@ const loginPanel = document.getElementById("login-panel");
 const unlockButton = document.getElementById("unlock-button");
 const clientBlockScreen = document.getElementById("client-block-screen");
 const blockedRefreshButton = document.getElementById("blocked-refresh-button");
+const deviceAccessModal = document.getElementById("device-access-modal");
+const deviceAccessAcceptAll = document.getElementById("device-access-accept-all");
+const deviceAccessAgreeButton = document.getElementById("device-access-agree");
 const volumeButton = document.getElementById("volume-button");
 const volumeIcon = document.getElementById("volume-icon");
 const quickSettings = document.getElementById("quick-settings");
@@ -234,6 +237,13 @@ const appCatalog = {
         icon: "assets/game-cloud.webp",
         description: "Ung dung Limore Cloud da san sang.",
         layout: "limore-cloud"
+    },
+    telegram: {
+        name: "Telegram",
+        icon: "assets/telegram-icon.svg",
+        description: "Mo kenh Telegram Limore Cloud.",
+        launchInApp: "chrome",
+        launchUrl: "https://t.me/limorecloudgame"
     }
 };
 
@@ -273,11 +283,16 @@ const LIMORE_ADMIN_DATA_KEY = "win11_limore_admin_data_v1";
 const LIMORE_SYNC_SIGNAL_KEY = "win11_limore_sync_signal_v1";
 const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
 const LIMORE_CLIENTS_API = "/api/limore-clients";
+const LIMORE_CLIENT_ACTIVITY_API = "/api/limore-client-activity";
 const LIMORE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
 const DESKTOP_CURRENT_USER_KEY = "win11_current_user_id_v1";
 const LIMORE_ROLLOUT_ASSIGNMENT_KEY = "win11_rollout_assignment_v1";
+const DEVICE_ACCESS_ACCEPTED_KEY = "win11_device_access_prompt_accepted_v1";
 let blockedClientIds = [];
 let currentRolloutAssignment = null;
+let clientActivityQueue = [];
+let clientActivityFlushTimer = 0;
+let clientActivityLastSentAt = 0;
 
 function buildSteamHeaderImage(appId) {
     return `${STEAM_ASSET_BASE_URL}/${appId}/header.jpg`;
@@ -518,6 +533,108 @@ function getClientDeviceType() {
     return "desktop";
 }
 
+function hasTrackingConsent() {
+    try {
+        return localStorage.getItem(DEVICE_ACCESS_ACCEPTED_KEY) === "1";
+    } catch (error) {
+        return false;
+    }
+}
+
+function buildClientActivityEvent(eventType, action, detail = "", extra = {}) {
+    const currentUser = getCurrentDesktopUser();
+    return {
+        at: new Date().toISOString(),
+        clientId: getOrCreateClientId(),
+        currentUserId: String(currentDesktopUserId || ""),
+        desktopName: String(currentUser?.desktopName || ""),
+        limoreName: String(currentUser?.limoreName || ""),
+        deviceType: getClientDeviceType(),
+        isMobile: isMobileLikeViewport(),
+        currentPage: window.location.pathname,
+        eventType: String(eventType || "unknown").trim().slice(0, 64),
+        action: String(action || "").trim().slice(0, 120),
+        detail: String(detail || "").trim().slice(0, 240),
+        ...extra
+    };
+}
+
+function flushClientActivityQueue(options = {}) {
+    if (!clientActivityQueue.length) {
+        return;
+    }
+    if (!hasTrackingConsent()) {
+        clientActivityQueue = [];
+        return;
+    }
+
+    const useBeacon = Boolean(options.useBeacon);
+    const queueCopy = clientActivityQueue.slice(0, 40);
+    clientActivityQueue = clientActivityQueue.slice(queueCopy.length);
+    const payload = {
+        trackingAccepted: true,
+        events: queueCopy
+    };
+    const serialized = JSON.stringify(payload);
+
+    if (useBeacon && navigator.sendBeacon) {
+        try {
+            const blob = new Blob([serialized], { type: "application/json" });
+            const sent = navigator.sendBeacon(LIMORE_CLIENT_ACTIVITY_API, blob);
+            if (!sent) {
+                throw new Error("beacon_failed");
+            }
+            clientActivityLastSentAt = Date.now();
+        } catch (error) {
+            clientActivityQueue = [...queueCopy, ...clientActivityQueue].slice(0, 120);
+        }
+        return;
+    }
+
+    fetch(LIMORE_CLIENT_ACTIVITY_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: serialized,
+        keepalive: Boolean(options.keepalive)
+    }).then((response) => {
+        if (!response.ok) {
+            throw new Error("activity_send_failed");
+        }
+        clientActivityLastSentAt = Date.now();
+    }).catch(() => {
+        clientActivityQueue = [...queueCopy, ...clientActivityQueue].slice(0, 120);
+    });
+}
+
+function scheduleClientActivityFlush() {
+    if (clientActivityFlushTimer) {
+        return;
+    }
+    clientActivityFlushTimer = window.setTimeout(() => {
+        clientActivityFlushTimer = 0;
+        flushClientActivityQueue();
+    }, 1800);
+}
+
+function trackClientActivity(eventType, action, detail = "", extra = {}) {
+    if (!hasTrackingConsent()) {
+        return;
+    }
+
+    const nextEvent = buildClientActivityEvent(eventType, action, detail, extra);
+    clientActivityQueue.push(nextEvent);
+    if (clientActivityQueue.length > 120) {
+        clientActivityQueue = clientActivityQueue.slice(-120);
+    }
+
+    const now = Date.now();
+    if (now - clientActivityLastSentAt > 6000 || clientActivityQueue.length >= 8) {
+        flushClientActivityQueue();
+        return;
+    }
+    scheduleClientActivityFlush();
+}
+
 function syncClientBlockScreen() {
     const isBlocked = blockedClientIds.includes(getOrCreateClientId());
     if (isBlocked) {
@@ -544,12 +661,14 @@ function sendClientHeartbeat(force = false) {
         deviceType: getClientDeviceType(),
         userAgent: navigator.userAgent,
         currentPage: window.location.pathname,
+        activeAppId: activeAppId || "",
         desktopName: currentUser.desktopName,
         limoreName: currentUser.limoreName,
         currentUserId: currentDesktopUserId,
         setupComplete: initialSetupComplete,
         isMobile: isMobileLikeViewport(),
-        anonymous: !initialSetupComplete || !currentUser.limoreName || currentUser.limoreName === "Anonymous"
+        anonymous: !initialSetupComplete || !currentUser.limoreName || currentUser.limoreName === "Anonymous",
+        trackingAccepted: hasTrackingConsent()
     };
 
     fetch(LIMORE_CLIENTS_API, {
@@ -602,6 +721,44 @@ function bindClientHeartbeatActivity() {
     const activityEvents = ["pointerdown", "touchstart", "keydown"];
     activityEvents.forEach((eventName) => {
         document.addEventListener(eventName, () => sendClientHeartbeat(), { passive: true });
+    });
+}
+
+function bindClientActivityTracking() {
+    const clickTargets = ["button", "[data-app]", ".app-launcher", "a[href]"];
+    document.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest(clickTargets.join(",")) : null;
+        if (!target) {
+            return;
+        }
+        const actionLabel = String(
+            target.getAttribute("data-app")
+            || target.getAttribute("data-action")
+            || target.getAttribute("aria-label")
+            || target.textContent
+            || ""
+        ).trim().replace(/\s+/g, " ").slice(0, 80);
+        if (!actionLabel) {
+            return;
+        }
+        trackClientActivity("ui", "click", actionLabel);
+    }, { passive: true });
+
+    document.addEventListener("visibilitychange", () => {
+        trackClientActivity("session", document.visibilityState === "visible" ? "page_visible" : "page_hidden");
+        if (document.visibilityState === "hidden") {
+            flushClientActivityQueue({ useBeacon: true });
+        }
+    });
+
+    window.addEventListener("pagehide", () => {
+        trackClientActivity("session", "page_exit");
+        flushClientActivityQueue({ useBeacon: true });
+    });
+
+    window.addEventListener("beforeunload", () => {
+        trackClientActivity("session", "before_unload");
+        flushClientActivityQueue({ useBeacon: true });
     });
 }
 
@@ -1485,6 +1642,7 @@ function toggleStart(event) {
     hideDesktopThemePanel();
     hideDesktopMenu();
     startMenu.classList.toggle("open");
+    trackClientActivity("ui", "start_menu_toggle", startMenu.classList.contains("open") ? "open" : "close");
 }
 
 function closeStart(event) {
@@ -1837,6 +1995,77 @@ function renderCalendar(viewDate = calendarViewDate) {
     calendarGrid.innerHTML = cells.join("");
 }
 
+function setDeviceAccessModalVisible(isVisible) {
+    if (!deviceAccessModal) {
+        return;
+    }
+    deviceAccessModal.hidden = !isVisible;
+    deviceAccessModal.setAttribute("aria-hidden", isVisible ? "false" : "true");
+}
+
+async function requestDeviceAccessPermissions(acceptAll) {
+    if (!acceptAll) {
+        return;
+    }
+
+    if ("Notification" in window && Notification.permission === "default") {
+        try {
+            await Notification.requestPermission();
+        } catch (error) {
+            // Ignore browser permission errors.
+        }
+    }
+}
+
+function initializeDeviceAccessPrompt() {
+    if (!deviceAccessModal || !deviceAccessAcceptAll || !deviceAccessAgreeButton) {
+        return;
+    }
+
+    const LEGACY_SESSION_KEY = "win11_device_access_prompt_session_v1";
+    let alreadyAccepted = false;
+    try {
+        alreadyAccepted = localStorage.getItem(DEVICE_ACCESS_ACCEPTED_KEY) === "1"
+            || sessionStorage.getItem(LEGACY_SESSION_KEY) === "1";
+    } catch (error) {
+        alreadyAccepted = false;
+    }
+
+    if (alreadyAccepted) {
+        try {
+            localStorage.setItem(DEVICE_ACCESS_ACCEPTED_KEY, "1");
+        } catch (error) {
+            // Ignore storage write failures.
+        }
+        setDeviceAccessModalVisible(false);
+        return;
+    }
+
+    deviceAccessAcceptAll.checked = false;
+    deviceAccessAgreeButton.disabled = true;
+    setDeviceAccessModalVisible(true);
+
+    deviceAccessAcceptAll.addEventListener("change", () => {
+        deviceAccessAgreeButton.disabled = !deviceAccessAcceptAll.checked;
+    });
+
+    deviceAccessAgreeButton.addEventListener("click", async () => {
+        deviceAccessAgreeButton.disabled = true;
+        await requestDeviceAccessPermissions(deviceAccessAcceptAll.checked);
+        try {
+            localStorage.setItem(DEVICE_ACCESS_ACCEPTED_KEY, "1");
+            sessionStorage.setItem(LEGACY_SESSION_KEY, "1");
+        } catch (error) {
+            // Continue without storage.
+        }
+        trackClientActivity("consent", "tracking_accepted", "allow monitoring", {
+            acceptAll: true
+        });
+        flushClientActivityQueue();
+        setDeviceAccessModalVisible(false);
+    }, { once: true });
+}
+
 function updateClock() {
     const now = new Date();
     const timeText = now.toLocaleTimeString("en-US", {
@@ -2087,12 +2316,16 @@ function focusApp(appId) {
         return;
     }
 
+    const previousActiveAppId = activeAppId;
     appState.windowEl.classList.remove("minimized");
     zCounter += 1;
     appState.windowEl.style.zIndex = zCounter;
     activeAppId = appId;
     refreshTaskbarIndicators();
     scheduleSaveDesktopState();
+    if (previousActiveAppId !== appId) {
+        trackClientActivity("app", "focus_app", String(appId || ""));
+    }
 }
 
 function applyMaximizedGeometry(appState) {
@@ -2207,6 +2440,7 @@ function closeApp(appId) {
     }
     refreshTaskbarIndicators();
     scheduleSaveDesktopState();
+    trackClientActivity("app", "close_app", String(appId || ""));
 }
 
 function buildChromeWindowMarkup(app) {
@@ -2481,6 +2715,15 @@ function openUrlInsideDesktopChrome(url, title = "Website") {
             }
         }, 120);
     }
+    let host = "";
+    try {
+        host = new URL(String(url || ""), window.location.origin).host || "";
+    } catch (error) {
+        host = String(url || "");
+    }
+    trackClientActivity("web", "open_url", host, {
+        targetTitle: String(title || "").slice(0, 120)
+    });
 }
 
 function buildImageFallbackAttr(fallbackUrl) {
@@ -3940,6 +4183,9 @@ function openApp(appId, options = {}) {
     if (app.launchInApp === "chrome" && app.launchUrl) {
         openUrlInsideDesktopChrome(app.launchUrl, app.name);
         startMenu.classList.remove("open");
+        trackClientActivity("app", "open_app", String(appId || ""), {
+            launchMode: "chrome_proxy"
+        });
         return;
     }
 
@@ -3991,6 +4237,7 @@ function openApp(appId, options = {}) {
     normalizeOpenWindowsForViewport();
     startMenu.classList.remove("open");
     scheduleSaveDesktopState();
+    trackClientActivity("app", "open_app", String(appId || ""));
 }
 
 function toggleAppFromTaskbar(appId) {
@@ -5427,6 +5674,9 @@ async function bootstrapApp() {
     initializeScreenWakeLock();
     initializeLockScreen();
     startBootSequence();
+    initializeDeviceAccessPrompt();
+    bindClientActivityTracking();
+    trackClientActivity("session", "session_start");
     wireLaunchers();
     wireDesktopShortcuts();
     wireDesktopMenu();
