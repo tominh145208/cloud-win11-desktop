@@ -4928,10 +4928,14 @@ body.mobile-fit .controller-menu-toggle {
 .vg-shoulder,
 .vg-dpad-btn,
 .vg-stick-thumb {
-    border: 1px solid rgba(220, 236, 249, 0.7);
-    color: #eef7ff;
-    background: radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.28), rgba(20, 27, 35, 0.72));
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(210, 230, 245, 0.55);
+    color: rgba(236, 245, 255, 0.9);
+    background:
+        radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.22), rgba(22, 27, 33, 0.55)),
+        rgba(10, 14, 18, 0.35);
+    box-shadow:
+        0 6px 16px rgba(0, 0, 0, 0.28),
+        inset 0 0 12px rgba(255, 255, 255, 0.12);
 }
 
 .vg-round,
@@ -4940,71 +4944,90 @@ body.mobile-fit .controller-menu-toggle {
     place-items: center;
     font-size: 30px;
     cursor: pointer;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
 }
 
 .vg-mid-btn {
-    width: 78px;
-    height: 78px;
+    width: 72px;
+    height: 72px;
     border-radius: 999px;
 }
 
 .vg-face-btn {
-    width: 86px;
-    height: 86px;
+    width: 78px;
+    height: 78px;
     border-radius: 999px;
-    font-size: 42px;
+    font-size: 34px;
 }
 
 .vg-stick-btn {
-    width: 66px;
-    height: 66px;
+    width: 60px;
+    height: 60px;
     border-radius: 999px;
-    font-size: 30px;
+    font-size: 26px;
 }
 
 .vg-shoulder {
-    width: 92px;
-    height: 44px;
-    border-radius: 0 18px 18px 0;
+    width: 86px;
+    height: 40px;
+    border-radius: 12px;
+    border-color: rgba(210, 230, 245, 0.42);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(10, 14, 18, 0.55)),
+        rgba(6, 8, 11, 0.4);
+}
+
+.vg-shoulder[data-control="lt"],
+.vg-shoulder[data-control="lb"] {
+    border-radius: 18px 8px 8px 18px;
+}
+
+.vg-shoulder[data-control="rt"],
+.vg-shoulder[data-control="rb"] {
+    border-radius: 8px 18px 18px 8px;
 }
 
 .vg-stick-wrap {
-    width: 170px;
-    height: 170px;
+    width: 160px;
+    height: 160px;
 }
 
 .vg-stick-ring {
     width: 100%;
     height: 100%;
-    border: 1px solid rgba(210, 229, 244, 0.45);
+    border: 1px solid rgba(210, 229, 244, 0.38);
     border-radius: 50%;
-    background: rgba(14, 22, 30, 0.22);
+    background: rgba(10, 14, 18, 0.18);
     display: grid;
     place-items: center;
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.35);
 }
 
 .vg-stick-thumb {
-    width: 70px;
-    height: 70px;
+    width: 62px;
+    height: 62px;
     border-radius: 50%;
     display: grid;
     place-items: center;
-    font-size: 34px;
+    font-size: 28px;
 }
 
 .vg-dpad-wrap {
     display: grid;
-    grid-template-columns: 42px 42px 42px;
-    grid-template-rows: 42px 42px 42px;
-    gap: 2px;
-    width: 130px;
-    height: 130px;
+    grid-template-columns: 36px 36px 36px;
+    grid-template-rows: 36px 36px 36px;
+    gap: 4px;
+    width: 116px;
+    height: 116px;
 }
 
 .vg-dpad-btn {
-    border-radius: 6px;
-    font-size: 26px;
+    border-radius: 8px;
+    font-size: 22px;
     cursor: pointer;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(18, 22, 28, 0.55)),
+        rgba(10, 12, 16, 0.4);
 }
 
 .vg-dpad-btn[data-control="dpadUp"] {
@@ -5029,9 +5052,11 @@ body.mobile-fit .controller-menu-toggle {
 
 .vg-control.active:not(.vg-stick-wrap),
 .vg-dpad-btn.active {
-    border-color: rgba(146, 210, 255, 0.9);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
-    filter: brightness(1.12);
+    border-color: rgba(120, 200, 255, 0.85);
+    box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.3),
+        0 0 12px rgba(110, 210, 255, 0.35);
+    filter: brightness(1.08);
 }
 
 .vg-stick-wrap.active .vg-stick-ring {
