@@ -1,13 +1,14 @@
-const CACHE_NAME = "limore-cloud-shell-v3";
+const CACHE_NAME = "limore-cloud-shell-v4";
 const SHELL_FILES = [
     "/",
     "/index.html",
-    "/style.css",
-    "/script.js",
-    "/desktop-enhancements.js",
+    "/style.css?v=20260407-2",
+    "/script.js?v=20260407-2",
+    "/desktop-enhancements.js?v=20260407-2",
     "/manifest.webmanifest",
     "/assets/game-cloud.webp",
-    "/assets/chrome-custom-v1.png"
+    "/assets/chrome-custom-v1.png",
+    "/assets/edge-custom-v1.png"
 ];
 
 self.addEventListener("install", (event) => {

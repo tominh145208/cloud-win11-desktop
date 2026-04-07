@@ -5240,9 +5240,10 @@ function initializeVirtualController() {
         return;
     }
 
+    const autoShowVirtualGamepad = isMobileLikeViewport();
     setControllerMenuOpen(false);
-    setVirtualGamepadVisible(false);
-    setPhysicalGamepadMode(true);
+    setVirtualGamepadVisible(autoShowVirtualGamepad);
+    setPhysicalGamepadMode(!autoShowVirtualGamepad);
     setEditLayoutMode(false);
     updateControllerUptime();
 

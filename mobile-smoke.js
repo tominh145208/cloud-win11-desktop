@@ -95,12 +95,18 @@ async function run() {
   await assertOpen("#volume-button", "#quick-settings", "open", "quick-settings");
   await assertOpen("#controller-menu-toggle", "#controller-menu", "open", "controller-menu");
 
-  await page.click("#toggle-virtual-gamepad");
-  await page.waitForTimeout(180);
-  const gamepadVisible = await page.evaluate(() => {
+  let gamepadVisible = await page.evaluate(() => {
     const panel = document.getElementById("virtual-gamepad");
     return Boolean(panel) && !panel.classList.contains("hidden");
   });
+  if (!gamepadVisible) {
+    await page.click("#toggle-virtual-gamepad");
+    await page.waitForTimeout(180);
+    gamepadVisible = await page.evaluate(() => {
+      const panel = document.getElementById("virtual-gamepad");
+      return Boolean(panel) && !panel.classList.contains("hidden");
+    });
+  }
   if (!gamepadVisible) {
     errors.push("virtual-gamepad-not-visible-after-toggle");
   } else {
