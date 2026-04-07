@@ -11,9 +11,9 @@
   "theme_color": "#0f1219",
   "icons": [
     {
-      "src": "assets/lc-avatar.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "assets/lc-avatar.png",
+      "sizes": "195x181",
+      "type": "image/png",
       "purpose": "any"
     },
     {
