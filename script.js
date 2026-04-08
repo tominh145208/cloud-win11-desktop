@@ -1190,7 +1190,8 @@ function applyLimoreAdminData(data = loadLimoreAdminData()) {
     const rememberedCurrentUserId = String(data?.state?.rememberedCurrentUserId || "").trim();
     const matchedDesktopUser = desktopUsers.find((user) => user.id === storedDesktopUserId);
     const rememberedDesktopUser = desktopUsers.find((user) => user.id === rememberedCurrentUserId);
-    const resolvedDesktopUser = matchedDesktopUser || rememberedDesktopUser || null;
+    const canUseRememberedUser = Boolean(storedDesktopUserId) || hasMobileAccountSession();
+    const resolvedDesktopUser = matchedDesktopUser || (canUseRememberedUser ? rememberedDesktopUser : null) || null;
     currentDesktopUserId = resolvedDesktopUser?.id || "";
     initialSetupComplete = Boolean(resolvedDesktopUser);
     if (resolvedDesktopUser?.id) {
