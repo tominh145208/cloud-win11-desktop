@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Limore Cloud | Main</title>
+    <meta name="theme-color" content="#121212">
+    <link rel="icon" type="image/png" href="assets/lc-avatar.png">
+    <style>
+        :root {
+            --bg: #0f0f10;
+            --bg-soft: #17181b;
+            --line: rgba(255, 255, 255, 0.12);
+            --text: #f1f2f4;
+            --sub: #a9adb7;
+            --gold: #f4c649;
+            --gold-soft: #f0d98b;
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100dvh;
+            background:
+                radial-gradient(circle at 90% -10%, rgba(244, 198, 73, 0.16), transparent 38%),
+                radial-gradient(circle at -10% 100%, rgba(244, 198, 73, 0.1), transparent 36%),
+                var(--bg);
+            color: var(--text);
+            font-family: "Manrope", "Segoe UI", sans-serif;
+        }
+
+        .app {
+            min-height: 100dvh;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+        }
+
+        .topbar {
+            height: 64px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(8px);
+            background: rgba(15, 15, 16, 0.84);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand img {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: 1px solid var(--line);
+        }
+
+        .brand strong {
+            display: block;
+            font-size: 14px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .brand span {
+            display: block;
+            font-size: 11px;
+            color: var(--sub);
+        }
+
+        .topbar-link {
+            color: var(--gold-soft);
+            font-size: 12px;
+            text-decoration: none;
+            border: 1px solid rgba(244, 198, 73, 0.4);
+            border-radius: 999px;
+            padding: 7px 12px;
+        }
+
+        .content {
+            padding: 16px 16px calc(90px + env(safe-area-inset-bottom));
+        }
+
+        .panel {
+            display: none;
+            animation: fadeIn 180ms ease;
+        }
+
+        .panel.is-active {
+            display: block;
+        }
+
+        .hero {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+            padding: 18px;
+        }
+
+        .kicker {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid rgba(244, 198, 73, 0.34);
+            border-radius: 999px;
+            color: var(--gold-soft);
+            padding: 7px 12px;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 14px 0 10px;
+            font-size: clamp(28px, 7vw, 40px);
+            line-height: 1.05;
+        }
+
+        h1 .gold {
+            color: var(--gold);
+        }
+
+        .desc {
+            margin: 0;
+            color: var(--sub);
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .stats {
+            margin-top: 14px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .stat {
+            border: 1px solid var(--line);
+            border-radius: 13px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .stat strong {
+            color: var(--gold-soft);
+            font-size: 31px;
+            line-height: 1;
+        }
+
+        .stat span {
+            display: block;
+            margin-top: 8px;
+            color: #9ca1ac;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+
+        .cards {
+            margin-top: 14px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .card {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .card h2 {
+            margin: 0 0 8px;
+            font-size: 17px;
+        }
+
+        .card p {
+            margin: 0;
+            color: var(--sub);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 12px;
+            width: 100%;
+            text-decoration: none;
+            color: #171717;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 15px;
+            padding: 12px;
+            background: linear-gradient(120deg, var(--gold), #d9a931);
+        }
+
+        .home-games {
+            margin-top: 14px;
+            border: 0;
+            border-radius: 0;
+            padding: 0;
+            background: transparent;
+        }
+
+        .home-games-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .home-games-head strong {
+            font-size: 14px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .home-games-head span {
+            color: var(--sub);
+            font-size: 12px;
+        }
+
+        .home-games-refresh {
+            border: 1px solid rgba(244, 198, 73, 0.35);
+            background: rgba(244, 198, 73, 0.08);
+            color: var(--gold-soft);
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+        .home-games-search {
+            margin-bottom: 10px;
+        }
+
+        .home-games-search input {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 11px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font-size: 14px;
+            padding: 10px 12px;
+            outline: none;
+        }
+
+        .home-games-search input:focus {
+            border-color: rgba(244, 198, 73, 0.42);
+            box-shadow: 0 0 0 2px rgba(244, 198, 73, 0.12);
+        }
+
+        .home-games-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .home-game-card {
+            display: grid;
+            gap: 8px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(17, 18, 20, 0.92);
+            overflow: hidden;
+        }
+
+        .home-game-thumb {
+            width: 100%;
+            aspect-ratio: 460 / 215;
+            object-fit: cover;
+            display: block;
+            background: #111;
+        }
+
+        .home-game-meta {
+            padding: 0 9px 10px;
+            display: grid;
+            gap: 4px;
+        }
+
+        .home-game-title {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.3;
+            min-height: 32px;
+        }
+
+        .home-game-sub {
+            margin: 0;
+            color: var(--sub);
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .home-game-empty {
+            grid-column: 1 / -1;
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            color: var(--sub);
+            font-size: 13px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 30;
+            border-top: 1px solid var(--line);
+            background: rgba(15, 15, 16, 0.94);
+            backdrop-filter: blur(8px);
+            padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .tab-btn {
+            border: 0;
+            background: transparent;
+            color: #9ea3ac;
+            border-radius: 12px;
+            min-height: 58px;
+            display: grid;
+            place-items: center;
+            gap: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .tab-btn .icon {
+            width: 22px;
+            height: 22px;
+            display: block;
+        }
+
+        .tab-btn.is-active {
+            color: var(--gold);
+            background: rgba(244, 198, 73, 0.1);
+            border: 1px solid rgba(244, 198, 73, 0.26);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (min-width: 900px) {
+            .content {
+                width: min(980px, 100%);
+                margin: 0 auto;
+                padding-top: 22px;
+                padding-bottom: 120px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .cards {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .bottom-nav {
+                left: 50%;
+                transform: translateX(-50%);
+                width: min(460px, calc(100% - 20px));
+                border: 1px solid var(--line);
+                border-radius: 16px 16px 0 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header class="topbar">
+            <div class="brand">
+                <img src="assets/lc-avatar.png" alt="LC">
+                <div>
+                    <strong>Limore Cloud</strong>
+                    <span>Mobile Main</span>
+                </div>
+            </div>
+            <a class="topbar-link" href="https://t.me/limorecloudgame" target="_blank" rel="noopener noreferrer">Telegram</a>
+        </header>
+
+        <main class="content">
+            <section class="panel is-active" data-panel="home">
+                <section class="home-games" aria-label="Game Steam tu desktop">
+                    <div class="home-games-head">
+                        <div>
+                            <strong>Game Steam</strong>
+                            <span id="home-games-count">Dang tai...</span>
+                        </div>
+                        <button id="home-games-refresh" class="home-games-refresh" type="button">Lam moi</button>
+                    </div>
+                    <label class="home-games-search" aria-label="Tim game">
+                        <input id="home-games-search-input" type="search" placeholder="Tim game theo ten hoac the loai...">
+                    </label>
+                    <div id="home-games-grid" class="home-games-grid">
+                        <div class="home-game-empty">Dang tai danh sach game tu desktop...</div>
+                    </div>
+                </section>
+            </section>
+
+            <section class="panel" data-panel="pc" hidden>
+                <div class="cards">
+                    <article class="card">
+                        <h2>Cloud PC</h2>
+                        <p>Bat desktop cloud de vao giao dien PC day du, chay app va game nhu may tinh.</p>
+                        <a class="cta" href="index.html?fromIntro=1">Mo Cloud PC</a>
+                    </article>
+                    <article class="card">
+                        <h2>Trang thai ket noi</h2>
+                        <p>Ping thap va ket noi on dinh se giup choi game muot hon tren dien thoai.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="panel" data-panel="me" hidden>
+                <div class="cards">
+                    <article class="card">
+                        <h2>Toi</h2>
+                        <p>Quan ly tai khoan, thong bao va lien ket ho tro. Ban co the tuy chinh tu day.</p>
+                    </article>
+                    <article class="card">
+                        <h2>Ho tro nhanh</h2>
+                        <p>Nhan vao Telegram de lien he admin khi can mo rong game hoac xu ly loi.</p>
+                        <a class="cta" href="https://t.me/limorecloudgame" target="_blank" rel="noopener noreferrer">Mo Telegram</a>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Main tabs">
+        <button class="tab-btn is-active" type="button" data-tab="home" aria-selected="true">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 10.8 12 3l9 7.8"></path>
+                <path d="M5 9.5V21h14V9.5"></path>
+            </svg>
+            <span>Trang chu</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="pc" aria-selected="false">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+                <path d="M8 20h8"></path>
+                <path d="M10 16v4"></path>
+                <path d="M14 16v4"></path>
+            </svg>
+            <span>PC</span>
+        </button>
+        <button class="tab-btn" type="button" data-tab="me" aria-selected="false">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="8" r="4"></circle>
+                <path d="M4 21c1.8-4 5-6 8-6s6.2 2 8 6"></path>
+            </svg>
+            <span>Toi</span>
+        </button>
+    </nav>
+
+    <script>
+        (function setupMainMobileTabs() {
+            const INTRO_SESSION_KEY = "limore_intro_passed_session_v1";
+            const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
+            const STEAM_ASSET_BASE_URL = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps";
+            const fallbackGames = [
+                { appId: 730, title: "Counter-Strike 2", genre: "FPS Tactical", release: "2012" },
+                { appId: 570, title: "Dota 2", genre: "MOBA", release: "2013" },
+                { appId: 578080, title: "PUBG: BATTLEGROUNDS", genre: "Battle Royale", release: "2017" },
+                { appId: 1245620, title: "ELDEN RING", genre: "Action RPG", release: "2022" },
+                { appId: 1091500, title: "Cyberpunk 2077", genre: "Open World RPG", release: "2020" },
+                { appId: 1086940, title: "Baldur's Gate 3", genre: "CRPG", release: "2023" },
+                { appId: 1172470, title: "Apex Legends", genre: "Hero Shooter", release: "2020" },
+                { appId: 553850, title: "HELLDIVERS 2", genre: "Co-op Shooter", release: "2024" },
+                { appId: 2358720, title: "Black Myth: Wukong", genre: "Action RPG", release: "2024" },
+                { appId: 292030, title: "The Witcher 3: Wild Hunt", genre: "Open World RPG", release: "2015" },
+                { appId: 271590, title: "Grand Theft Auto V", genre: "Open World Crime", release: "2015" },
+                { appId: 1593500, title: "God of War", genre: "Action Adventure", release: "2022" },
+                { appId: 1888930, title: "The Last of Us Part I", genre: "Action Adventure", release: "2023" },
+                { appId: 582010, title: "Monster Hunter: World", genre: "Co-op Action", release: "2018" },
+                { appId: 813780, title: "Age of Empires IV", genre: "RTS", release: "2021" },
+                { appId: 1174180, title: "Red Dead Redemption 2", genre: "Open World Western", release: "2019" },
+                { appId: 381210, title: "Dead by Daylight", genre: "Asym Horror", release: "2016" },
+                { appId: 252490, title: "Rust", genre: "Survival Sandbox", release: "2018" },
+                { appId: 227300, title: "Euro Truck Simulator 2", genre: "Driving Sim", release: "2012" },
+                { appId: 1551360, title: "Forza Horizon 5", genre: "Open World Racing", release: "2021" }
+            ];
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("fromIntro") === "1") {
+                try {
+                    sessionStorage.setItem(INTRO_SESSION_KEY, "1");
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+                const cleanPath = `${window.location.pathname}${window.location.hash}`;
+                window.history.replaceState(null, "", cleanPath);
+            }
+
+            const tabButtons = Array.from(document.querySelectorAll(".tab-btn[data-tab]"));
+            const panels = Array.from(document.querySelectorAll(".panel[data-panel]"));
+            const homeGamesGrid = document.getElementById("home-games-grid");
+            const homeGamesCount = document.getElementById("home-games-count");
+            const homeGamesRefreshButton = document.getElementById("home-games-refresh");
+            const homeGamesSearchInput = document.getElementById("home-games-search-input");
+            let allHomeGames = [];
+
+            function buildSteamHeaderImage(appId) {
+                return `${STEAM_ASSET_BASE_URL}/${appId}/header.jpg`;
+            }
+
+            function normalizeGames(rawGames) {
+                return (Array.isArray(rawGames) ? rawGames : [])
+                    .map((game, index) => {
+                        const appId = Number(game?.appId);
+                        const title = String(game?.title || `Game ${index + 1}`).trim();
+                        const sections = String(game?.sections || "").toLowerCase();
+                        const image = String(game?.image || "").trim() || (Number.isFinite(appId) ? buildSteamHeaderImage(appId) : "");
+                        const storeUrl = String(game?.storeUrl || "").trim() || (Number.isFinite(appId) ? `https://store.steampowered.com/app/${appId}/` : "#");
+                        return {
+                            appId: Number.isFinite(appId) ? appId : 0,
+                            title: title || `Game ${index + 1}`,
+                            genre: String(game?.genre || "Steam game").trim() || "Steam game",
+                            release: String(game?.release || "").trim(),
+                            sections,
+                            image,
+                            storeUrl
+                        };
+                    })
+                    .filter((game) => game.title);
+            }
+
+            function selectHomeGames(games) {
+                const normalized = normalizeGames(games);
+                return normalized;
+            }
+
+            function mergeUniqueGames(primaryGames, secondaryGames) {
+                const merged = [];
+                const seen = new Set();
+                [...primaryGames, ...secondaryGames].forEach((game) => {
+                    const key = game.appId ? `app:${game.appId}` : `title:${String(game.title || "").toLowerCase()}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        merged.push(game);
+                    }
+                });
+                return merged;
+            }
+
+            function renderHomeGames(games) {
+                if (!homeGamesGrid || !homeGamesCount) {
+                    return;
+                }
+                if (!games.length) {
+                    homeGamesGrid.innerHTML = `<div class="home-game-empty">Chua co game tu desktop.</div>`;
+                    homeGamesCount.textContent = "0 game";
+                    return;
+                }
+
+                homeGamesCount.textContent = `${games.length} game`;
+                homeGamesGrid.innerHTML = games.map((game) => `
+                    <a class="home-game-card" href="${game.storeUrl}" target="_blank" rel="noopener noreferrer" title="${game.title}">
+                        <img class="home-game-thumb" src="${game.image}" alt="${game.title}" loading="lazy">
+                        <div class="home-game-meta">
+                            <p class="home-game-title">${game.title}</p>
+                            <p class="home-game-sub">${game.genre}${game.release ? ` • ${game.release}` : ""}</p>
+                        </div>
+                    </a>
+                `).join("");
+            }
+
+            function applyHomeGamesSearch() {
+                const keyword = String(homeGamesSearchInput?.value || "").trim().toLowerCase();
+                if (!keyword) {
+                    renderHomeGames(allHomeGames);
+                    return;
+                }
+                const filtered = allHomeGames.filter((game) => {
+                    const searchable = `${game.title} ${game.genre} ${game.release}`.toLowerCase();
+                    return searchable.includes(keyword);
+                });
+                renderHomeGames(filtered);
+            }
+
+            function getGamesFromLocalCache() {
+                try {
+                    const raw = localStorage.getItem("win11_limore_admin_data_v1");
+                    const parsed = raw ? JSON.parse(raw) : null;
+                    return Array.isArray(parsed?.games) ? parsed.games : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            async function loadHomeGamesFromDesktop() {
+                if (!homeGamesGrid || !homeGamesCount) {
+                    return;
+                }
+                homeGamesCount.textContent = "Dang tai...";
+                homeGamesGrid.innerHTML = `<div class="home-game-empty">Dang dong bo game tu desktop...</div>`;
+
+                try {
+                    const response = await fetch(`${LIMORE_ADMIN_DATA_API}?t=${Date.now()}`, { cache: "no-store" });
+                    if (!response.ok) {
+                        throw new Error("load_failed");
+                    }
+                    const payload = await response.json();
+                    const serverGames = payload?.data?.games;
+                    const selected = selectHomeGames(serverGames);
+                    if (!selected.length) {
+                        const localGames = selectHomeGames(getGamesFromLocalCache());
+                        allHomeGames = localGames.length ? localGames : selectHomeGames(fallbackGames);
+                        applyHomeGamesSearch();
+                        return;
+                    }
+                    allHomeGames = selected.length < 12
+                        ? mergeUniqueGames(selected, selectHomeGames(fallbackGames))
+                        : selected;
+                    applyHomeGamesSearch();
+                } catch (error) {
+                    const localGames = selectHomeGames(getGamesFromLocalCache());
+                    const primaryGames = localGames.length ? localGames : [];
+                    allHomeGames = mergeUniqueGames(primaryGames, selectHomeGames(fallbackGames));
+                    applyHomeGamesSearch();
+                }
+            }
+
+            function setTab(nextTab) {
+                tabButtons.forEach((button) => {
+                    const isActive = button.dataset.tab === nextTab;
+                    button.classList.toggle("is-active", isActive);
+                    button.setAttribute("aria-selected", isActive ? "true" : "false");
+                });
+
+                panels.forEach((panel) => {
+                    const isActive = panel.dataset.panel === nextTab;
+                    panel.classList.toggle("is-active", isActive);
+                    panel.hidden = !isActive;
+                });
+            }
+
+            tabButtons.forEach((button) => {
+                button.addEventListener("click", () => {
+                    setTab(button.dataset.tab || "home");
+                });
+            });
+
+            homeGamesRefreshButton?.addEventListener("click", () => {
+                loadHomeGamesFromDesktop();
+            });
+            homeGamesSearchInput?.addEventListener("input", () => {
+                applyHomeGamesSearch();
+            });
+
+            loadHomeGamesFromDesktop();
+        })();
+    </script>
+</body>
+</html>

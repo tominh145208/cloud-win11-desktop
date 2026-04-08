@@ -597,19 +597,19 @@
                     loadingOverlay.setAttribute("aria-hidden", "false");
                     window.setTimeout(() => {
                         markSessionPassed();
-                        window.location.replace("index.html?fromIntro=1");
+                        window.location.replace("main.html?fromIntro=1");
                     }, 1500);
                     return;
                 }
 
                 markSessionPassed();
-                window.location.replace("index.html?fromIntro=1");
+                window.location.replace("main.html?fromIntro=1");
             };
 
             if (!isPreview) {
                 try {
                     if (sessionStorage.getItem(INTRO_SESSION_KEY) === "1") {
-                        window.location.replace("index.html");
+                        window.location.replace("main.html");
                         return;
                     }
                 } catch (error) {
