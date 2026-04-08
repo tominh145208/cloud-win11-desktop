@@ -199,11 +199,13 @@ const adminRoleInput = document.getElementById("admin-role-input");
 const otpEnabledInput = document.getElementById("otp-enabled-input");
 const otpCodeInput = document.getElementById("otp-code-input");
 const saveOtpButton = document.getElementById("save-otp-button");
-const adminManageUsernameInput = document.getElementById("admin-manage-username");
-const adminManageRoleInput = document.getElementById("admin-manage-role");
-const adminManageOtpStateInput = document.getElementById("admin-manage-otp-state");
-const openManageSecurityButton = document.getElementById("open-manage-security-button");
-const openManagePermissionsButton = document.getElementById("open-manage-permissions-button");
+const userManageIdInput = document.getElementById("user-manage-id");
+const userManageDesktopNameInput = document.getElementById("user-manage-desktop-name");
+const userManageLimoreNameInput = document.getElementById("user-manage-limore-name");
+const userManageBalanceInput = document.getElementById("user-manage-balance");
+const userManagePackageInput = document.getElementById("user-manage-package");
+const openManageAccountButton = document.getElementById("open-manage-account-button");
+const openManageUsersButton = document.getElementById("open-manage-users-button");
 const roleUsernameInput = document.getElementById("role-username-input");
 const roleLevelInput = document.getElementById("role-level-input");
 const rolePasswordInput = document.getElementById("role-password-input");
@@ -716,9 +718,6 @@ function applyRolePermissions() {
     }
     if (saveRoleUserButton) {
         saveRoleUserButton.disabled = !isSuperAdmin();
-    }
-    if (openManagePermissionsButton) {
-        openManagePermissionsButton.disabled = !isSuperAdmin();
     }
     [roleUsernameInput, roleLevelInput, rolePasswordInput, otpEnabledInput, otpCodeInput].forEach((input) => {
         if (!input) {
@@ -1443,16 +1442,23 @@ function renderOverview() {
     overviewPackage.textContent = activePackage ? activePackage.title : "Chua co";
 }
 
-function renderAdminAuthManagePanel() {
-    if (adminManageUsernameInput) {
-        adminManageUsernameInput.value = String(adminUsername || "admin");
+function renderManageUserAccountPanel() {
+    const currentUser = getCurrentUser();
+    const activePackage = adminData.packages.find((pkg) => pkg.id === currentUser?.activePackageId);
+    if (userManageIdInput) {
+        userManageIdInput.value = String(currentUser?.id || "-");
     }
-    if (adminManageRoleInput) {
-        adminManageRoleInput.value = adminRole === "super_admin" ? "super_admin" : "mod";
+    if (userManageDesktopNameInput) {
+        userManageDesktopNameInput.value = String(currentUser?.desktopName || "-");
     }
-    if (adminManageOtpStateInput) {
-        const otpEnabled = otpEnabledInput?.value === "1";
-        adminManageOtpStateInput.value = otpEnabled ? "Dang bat" : "Dang tat";
+    if (userManageLimoreNameInput) {
+        userManageLimoreNameInput.value = String(currentUser?.limoreName || "-");
+    }
+    if (userManageBalanceInput) {
+        userManageBalanceInput.value = formatBalance(Number(currentUser?.balance || 0));
+    }
+    if (userManagePackageInput) {
+        userManagePackageInput.value = activePackage ? activePackage.title : "Chua co";
     }
 }
 
@@ -2089,7 +2095,7 @@ function mergeClientRows(clients) {
 function renderAll() {
     renderOverview();
     renderAdminPresence();
-    renderAdminAuthManagePanel();
+    renderManageUserAccountPanel();
     renderRolloutPanel();
     renderAccountForm();
     renderPackagesForm();
@@ -3347,11 +3353,11 @@ adminLoginForm?.addEventListener("submit", handleAdminLogin);
 changePasswordButton?.addEventListener("click", handleChangePassword);
 saveOtpButton?.addEventListener("click", handleSaveOtpSettings);
 saveRoleUserButton?.addEventListener("click", handleSaveRoleUser);
-openManageSecurityButton?.addEventListener("click", () => {
-    openManageSubtab("manage-security");
+openManageAccountButton?.addEventListener("click", () => {
+    openManageSubtab("manage-account");
 });
-openManagePermissionsButton?.addEventListener("click", () => {
-    openManageSubtab("manage-permissions");
+openManageUsersButton?.addEventListener("click", () => {
+    openManageSubtab("manage-users");
 });
 refreshAuditButton?.addEventListener("click", fetchAuditLogs);
 refreshAlertsButton?.addEventListener("click", fetchAlerts);
