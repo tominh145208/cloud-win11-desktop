@@ -244,11 +244,12 @@
         }
 
         .home-games-search {
-            margin-bottom: 8px;
+            margin-bottom: 14px;
+            display: flex;
         }
 
         .home-games-search input {
-            width: 100%;
+            width: min(72%, 250px);
             border: 1px solid var(--line);
             border-radius: 11px;
             background: rgba(255, 255, 255, 0.03);
@@ -276,6 +277,12 @@
             border-radius: 10px;
             background: rgba(17, 18, 20, 0.92);
             overflow: hidden;
+            width: 100%;
+            padding: 0;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
         }
 
         .home-game-thumb {
@@ -484,6 +491,363 @@
             color: #d2d2d2;
             font-size: 11px;
             line-height: 1.5;
+        }
+
+        .pc-area-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 66;
+            background:
+                radial-gradient(circle at 86% -8%, rgba(244, 198, 73, 0.2), transparent 34%),
+                radial-gradient(circle at -12% 112%, rgba(244, 198, 73, 0.16), transparent 40%),
+                linear-gradient(180deg, #121316, #111216 44%, #101114 100%);
+            color: #f2f3f8;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            padding: calc(6px + var(--safe-top)) 8px calc(12px + env(safe-area-inset-bottom));
+        }
+
+        .pc-area-screen[hidden] {
+            display: none;
+        }
+
+        .pc-area-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 34px;
+            margin-bottom: 6px;
+        }
+
+        .pc-area-back {
+            border: 0;
+            background: transparent;
+            color: #e6e7eb;
+            font-size: 16px;
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            cursor: pointer;
+        }
+
+        .pc-area-title {
+            margin: 0;
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #f2f3f7;
+        }
+
+        .pc-area-content {
+            overflow: auto;
+            padding-bottom: 10px;
+        }
+
+        .pc-area-section {
+            margin-bottom: 14px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .pc-area-section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .pc-area-section-head strong {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #d8d9df;
+        }
+
+        .pc-area-retry {
+            border: 1px solid rgba(244, 198, 73, 0.35);
+            background: rgba(26, 26, 27, 0.86);
+            color: #f0d98b;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .pc-area-retry.is-running {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .pc-area-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .pc-area-card {
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 8px;
+            background: linear-gradient(160deg, rgba(33, 34, 37, 0.92), rgba(21, 22, 24, 0.92));
+            padding: 8px;
+            text-align: left;
+            color: #f1f2f5;
+            min-height: 72px;
+            display: grid;
+            gap: 4px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .pc-area-card small {
+            color: #aeb1bb;
+            font-size: 10px;
+            line-height: 1.35;
+        }
+
+        .pc-area-card .ping {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #ffd85e;
+        }
+
+        .pc-area-card .tag {
+            font-size: 9px;
+            font-weight: 700;
+            color: #1f1f1f;
+            background: linear-gradient(120deg, #ffce59, #f2a83d);
+            border-radius: 999px;
+            padding: 2px 6px;
+            width: fit-content;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .pc-area-card.is-selected {
+            outline: 2px solid rgba(244, 198, 73, 0.9);
+            background: linear-gradient(160deg, rgba(56, 48, 29, 0.9), rgba(28, 28, 25, 0.92));
+        }
+
+        .pc-area-card.is-selected::after {
+            content: "✔";
+            position: absolute;
+            right: 8px;
+            bottom: 7px;
+            font-size: 12px;
+            color: #ffe9a8;
+        }
+
+        .pc-area-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            padding-top: 8px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .pc-area-play-controls {
+            display: grid;
+            gap: 8px;
+        }
+
+        .pc-area-play-controls[hidden] {
+            display: none;
+        }
+
+        .pc-area-meta {
+            color: #c9cbd3;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .pc-area-play {
+            border: 0;
+            border-radius: 999px;
+            background: linear-gradient(120deg, #f4c649, #d8a832);
+            color: #1e1f23;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+
+        .pc-queue-banner {
+            border: 1px solid rgba(244, 198, 73, 0.4);
+            border-radius: 10px;
+            background: linear-gradient(160deg, rgba(38, 37, 31, 0.94), rgba(24, 24, 25, 0.92));
+            padding: 14px 12px;
+            display: grid;
+            gap: 10px;
+            min-height: 92px;
+        }
+
+        .pc-queue-banner[hidden] {
+            display: none;
+        }
+
+        .pc-queue-banner strong {
+            font-size: 14px;
+            color: #f0d98b;
+        }
+
+        .pc-queue-banner-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .pc-queue-toggle {
+            width: 26px;
+            height: 22px;
+            border: 1px solid rgba(244, 198, 73, 0.42);
+            border-radius: 999px;
+            background: rgba(244, 198, 73, 0.12);
+            color: #f2df9a;
+            font-size: 13px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .pc-queue-cancel {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #e8e9ee;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 18px;
+            cursor: pointer;
+            justify-self: center;
+        }
+
+        .pc-queue-widget {
+            position: fixed;
+            right: 10px;
+            bottom: calc(72px + env(safe-area-inset-bottom));
+            z-index: 67;
+            width: min(180px, calc(100vw - 20px));
+            border: 1px solid rgba(244, 198, 73, 0.42);
+            border-radius: 10px;
+            background: linear-gradient(160deg, rgba(35, 34, 31, 0.96), rgba(22, 22, 22, 0.94));
+            padding: 8px;
+            display: grid;
+            gap: 4px;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3);
+        }
+
+        .pc-queue-widget[hidden] {
+            display: none;
+        }
+
+        .pc-queue-widget strong {
+            font-size: 11px;
+            color: #f0d880;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .pc-queue-widget-tools {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pc-queue-widget-toggle {
+            width: 21px;
+            height: 21px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.07);
+            color: #f5f5f8;
+            font-size: 11px;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-grid;
+            place-items: center;
+        }
+
+        .pc-queue-widget small {
+            color: #cdd0da;
+            font-size: 10px;
+            line-height: 1.35;
+        }
+
+        .pc-spinner {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            border: 2px solid rgba(255, 220, 120, 0.38);
+            border-top-color: #ffd45e;
+            animation: pcSpin 0.7s linear infinite;
+            display: inline-block;
+        }
+
+        .pc-toast {
+            position: fixed;
+            right: 10px;
+            top: calc(78px + var(--safe-top));
+            z-index: 78;
+            max-width: min(300px, calc(100vw - 20px));
+            border: 1px solid rgba(240, 92, 92, 0.55);
+            border-radius: 11px;
+            background: linear-gradient(160deg, rgba(41, 20, 20, 0.96), rgba(22, 14, 14, 0.96));
+            color: #ffb6b6;
+            font-size: 12px;
+            line-height: 1.45;
+            padding: 10px 12px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+            word-break: break-word;
+        }
+
+        .pc-toast[hidden] {
+            display: none;
+        }
+
+        .mobile-loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 76;
+            display: grid;
+            place-items: center;
+            background: rgba(7, 8, 12, 0.76);
+        }
+
+        .mobile-loading-overlay[hidden] {
+            display: none;
+        }
+
+        .mobile-loading-core {
+            display: grid;
+            justify-items: center;
+            gap: 10px;
+        }
+
+        .mobile-loading-dot {
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+            border: 4px solid rgba(244, 198, 73, 0.24);
+            border-top-color: #f4c649;
+            animation: pcSpin 0.7s linear infinite;
+        }
+
+        .mobile-loading-core span {
+            color: #ecdba9;
+            font-size: 12px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        @keyframes pcSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .play-confirm {
@@ -1185,6 +1549,62 @@
         </div>
     </div>
 
+    <section id="pc-area-screen" class="pc-area-screen" hidden aria-hidden="true">
+        <header class="pc-area-top">
+            <button id="pc-area-back" class="pc-area-back" type="button" aria-label="Quay lai">‹</button>
+            <h3 class="pc-area-title">Area</h3>
+        </header>
+        <main class="pc-area-content">
+            <section class="pc-area-section">
+                <div class="pc-area-section-head">
+                    <strong>Experience server</strong>
+                    <button id="pc-area-retry" class="pc-area-retry" type="button">Thu lai ↻</button>
+                </div>
+                <div id="pc-area-grid-experience" class="pc-area-grid"></div>
+            </section>
+
+            <section class="pc-area-section">
+                <div class="pc-area-section-head">
+                    <strong>Payment server</strong>
+                </div>
+                <div id="pc-area-grid-payment" class="pc-area-grid"></div>
+            </section>
+        </main>
+        <footer class="pc-area-bottom">
+            <div id="pc-area-play-controls" class="pc-area-play-controls">
+                <div id="pc-area-meta" class="pc-area-meta">SouthEastAsia 2 • 120 coins/hour</div>
+                <button id="pc-area-play" class="pc-area-play" type="button">Play now</button>
+            </div>
+            <div id="pc-queue-banner" class="pc-queue-banner" hidden>
+                <div class="pc-queue-banner-head">
+                    <strong>Currently in line <span id="pc-queue-line">19</span></strong>
+                    <button id="pc-queue-toggle" class="pc-queue-toggle" type="button" aria-label="Thu gon queue">⌄</button>
+                </div>
+                <button id="pc-queue-cancel" class="pc-queue-cancel" type="button">Cancel queue</button>
+            </div>
+        </footer>
+    </section>
+
+    <div id="pc-queue-widget" class="pc-queue-widget" hidden>
+        <strong>
+            <span>Queue line <span id="pc-queue-widget-line">19</span></span>
+            <span class="pc-queue-widget-tools">
+                <span class="pc-spinner" aria-hidden="true"></span>
+                <button id="pc-queue-widget-toggle" class="pc-queue-widget-toggle" type="button" aria-label="Mo rong queue">⌃</button>
+            </span>
+        </strong>
+        <small id="pc-queue-widget-copy">Khoang 15p nua se vao duoc may.</small>
+    </div>
+
+    <div id="pc-toast" class="pc-toast" hidden aria-live="polite"></div>
+
+    <div id="mobile-loading-overlay" class="mobile-loading-overlay" hidden aria-hidden="true">
+        <div class="mobile-loading-core" role="status" aria-live="polite">
+            <div class="mobile-loading-dot" aria-hidden="true"></div>
+            <span>Dang ket noi...</span>
+        </div>
+    </div>
+
     <div id="play-confirm-modal" class="play-confirm" hidden aria-hidden="true">
         <div class="play-confirm-card" role="dialog" aria-modal="true" aria-labelledby="play-confirm-title">
             <strong id="play-confirm-title">Choi game nay?</strong>
@@ -1294,10 +1714,77 @@
             const playConfirmCopy = document.getElementById("play-confirm-copy");
             const playConfirmCancelButton = document.getElementById("play-confirm-cancel");
             const playConfirmAcceptButton = document.getElementById("play-confirm-accept");
+            const pcAreaScreen = document.getElementById("pc-area-screen");
+            const pcAreaBackButton = document.getElementById("pc-area-back");
+            const pcAreaRetryButton = document.getElementById("pc-area-retry");
+            const pcAreaExperienceGrid = document.getElementById("pc-area-grid-experience");
+            const pcAreaPaymentGrid = document.getElementById("pc-area-grid-payment");
+            const pcAreaPlayControls = document.getElementById("pc-area-play-controls");
+            const pcAreaMeta = document.getElementById("pc-area-meta");
+            const pcAreaPlayButton = document.getElementById("pc-area-play");
+            const pcQueueBanner = document.getElementById("pc-queue-banner");
+            const pcQueueLine = document.getElementById("pc-queue-line");
+            const pcQueueCancelButton = document.getElementById("pc-queue-cancel");
+            const pcQueueToggleButton = document.getElementById("pc-queue-toggle");
+            const pcQueueWidget = document.getElementById("pc-queue-widget");
+            const pcQueueWidgetLine = document.getElementById("pc-queue-widget-line");
+            const pcQueueWidgetCopy = document.getElementById("pc-queue-widget-copy");
+            const pcQueueWidgetToggleButton = document.getElementById("pc-queue-widget-toggle");
+            const pcToast = document.getElementById("pc-toast");
+            const mobileLoadingOverlay = document.getElementById("mobile-loading-overlay");
             let allHomeGames = [];
             let selectedPcGameTitle = "";
+            let pendingPcLaunchGameTitle = "";
             let activeTab = "home";
             let pendingProtectedRequest = null;
+            let selectedAreaServerId = "pay-sea2";
+            let queueLineNumber = 19;
+            let queueIsActive = false;
+            let queueIsCollapsed = false;
+            let queueJoinTimeoutId = null;
+            let queueTickIntervalId = null;
+            let pcToastTimeoutId = null;
+
+            const DIRECT_SERVER_COST = 120;
+            const QUEUE_ENTRY_DELAY_MS = 15 * 60 * 1000;
+            const pcAreaServers = [
+                {
+                    id: "exp-sea2",
+                    group: "experience",
+                    tag: "Free level 1",
+                    name: "SouthEastAsia 2",
+                    wait: "wait: 180",
+                    mode: "queue",
+                    ping: 50
+                },
+                {
+                    id: "exp-sea1",
+                    group: "experience",
+                    tag: "Free level 1",
+                    name: "SouthEastAsia 1",
+                    wait: "wait: 180",
+                    mode: "queue",
+                    ping: 104
+                },
+                {
+                    id: "pay-sea2",
+                    group: "payment",
+                    tag: "Payment level 2",
+                    name: "SouthEastAsia 2",
+                    wait: "no need to wait",
+                    mode: "direct",
+                    ping: 52
+                },
+                {
+                    id: "pay-sea1",
+                    group: "payment",
+                    tag: "Payment level 1",
+                    name: "SouthEastAsia 1",
+                    wait: "wait: 180",
+                    mode: "queue",
+                    ping: 146
+                }
+            ];
 
             function normalizeUserId(username) {
                 const base = String(username || "")
@@ -1352,9 +1839,38 @@
                 return Boolean(mobileAccount?.username && mobileAccount?.password);
             }
 
+            function readAdminDataCache() {
+                try {
+                    const raw = localStorage.getItem("win11_limore_admin_data_v1");
+                    const parsed = raw ? JSON.parse(raw) : null;
+                    return parsed && typeof parsed === "object" ? parsed : null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function getCurrentCoinBalance() {
+                const adminData = readAdminDataCache();
+                const users = Array.isArray(adminData?.users) ? adminData.users : [];
+                const activeId = String(mobileAccount?.userId || adminData?.state?.currentUserId || "").trim();
+                const matchedUser = activeId
+                    ? users.find((user) => String(user?.id || "") === activeId)
+                    : null;
+                const matchedBalance = Number(matchedUser?.balance);
+                if (Number.isFinite(matchedBalance) && matchedBalance >= 0) {
+                    return Math.floor(matchedBalance);
+                }
+                const valueFromUi = Number.parseInt(String(meCoinsValue?.textContent || "").replace(/[^0-9]/g, ""), 10);
+                if (Number.isFinite(valueFromUi) && valueFromUi >= 0) {
+                    return valueFromUi;
+                }
+                return 0;
+            }
+
             function refreshMeProfile() {
                 const username = isMobileLoggedIn() ? mobileAccount.username : "Nguoi dung";
                 const userId = isMobileLoggedIn() ? mobileAccount.userId : "guest";
+                const balance = getCurrentCoinBalance();
                 if (meUsername) {
                     meUsername.textContent = username;
                 }
@@ -1362,7 +1878,7 @@
                     meUserId.textContent = `ID: ${userId}`;
                 }
                 if (meCoinsValue) {
-                    meCoinsValue.textContent = "0 COINS";
+                    meCoinsValue.textContent = `${balance} COINS`;
                 }
             }
 
@@ -1531,13 +2047,13 @@
 
                 homeGamesCount.textContent = `${games.length} game`;
                 homeGamesGrid.innerHTML = games.map((game) => `
-                    <a class="home-game-card" href="${game.storeUrl}" target="_blank" rel="noopener noreferrer" title="${game.title}">
+                    <button class="home-game-card" type="button" data-home-game="${String(game.title || "").replace(/"/g, "&quot;")}" title="${game.title}">
                         <img class="home-game-thumb" src="${game.image}" alt="${game.title}" loading="lazy">
                         <div class="home-game-meta">
                             <p class="home-game-title">${game.title}</p>
                             <p class="home-game-sub">${game.genre}${game.release ? ` • ${game.release}` : ""}</p>
                         </div>
-                    </a>
+                    </button>
                 `).join("");
             }
 
@@ -1568,10 +2084,270 @@
                 selectedPcGameTitle = String(gameTitle || "").trim();
                 if (playConfirmCopy) {
                     playConfirmCopy.textContent = selectedPcGameTitle
-                        ? `Ban co muon choi \"${selectedPcGameTitle}\" khong?`
-                        : "Ban co muon choi game nay khong?";
+                        ? `Ban co muon chon \"${selectedPcGameTitle}\" va chuyen sang tab PC khong?`
+                        : "Ban co muon chuyen sang tab PC de tiep tuc khong?";
                 }
                 setPlayConfirmVisible(true);
+            }
+
+            function getAreaServerById(serverId) {
+                return pcAreaServers.find((server) => server.id === String(serverId || "")) || null;
+            }
+
+            function randomPing(min, max) {
+                const low = Math.min(min, max);
+                const high = Math.max(min, max);
+                return Math.floor(Math.random() * (high - low + 1)) + low;
+            }
+
+            function refreshPcAreaServerPings() {
+                pcAreaServers.forEach((server) => {
+                    server.ping = randomPing(48, 166);
+                });
+            }
+
+            function renderPcAreaServerGrid(targetElement, groupName) {
+                if (!targetElement) {
+                    return;
+                }
+                const cards = pcAreaServers.filter((server) => server.group === groupName);
+                targetElement.innerHTML = cards.map((server) => `
+                    <button
+                        class="pc-area-card${server.id === selectedAreaServerId ? " is-selected" : ""}"
+                        type="button"
+                        data-area-server="${server.id}">
+                        <span class="tag">${server.tag}</span>
+                        <strong>${server.name}</strong>
+                        <small>${server.wait}</small>
+                        <span class="ping">${server.ping}ms</span>
+                    </button>
+                `).join("");
+            }
+
+            function updatePcAreaMeta() {
+                if (!pcAreaMeta) {
+                    return;
+                }
+                const selectedServer = getAreaServerById(selectedAreaServerId);
+                const serverName = selectedServer?.name || "SouthEastAsia 2";
+                const currentCoins = getCurrentCoinBalance();
+                if (!selectedServer) {
+                    pcAreaMeta.textContent = "Chon may chu de tiep tuc.";
+                    return;
+                }
+                if (selectedServer.mode === "direct") {
+                    pcAreaMeta.textContent = `${serverName} • ${DIRECT_SERVER_COST} coins/hour • So du: ${currentCoins} coins`;
+                    return;
+                }
+                pcAreaMeta.textContent = `${serverName} • Queue mode • Khoang 15p nua toi luot`;
+            }
+
+            function renderPcAreaServers() {
+                renderPcAreaServerGrid(pcAreaExperienceGrid, "experience");
+                renderPcAreaServerGrid(pcAreaPaymentGrid, "payment");
+                updatePcAreaMeta();
+            }
+
+            function setPcAreaVisible(isVisible) {
+                if (!pcAreaScreen) {
+                    return;
+                }
+                pcAreaScreen.hidden = !isVisible;
+                pcAreaScreen.setAttribute("aria-hidden", isVisible ? "false" : "true");
+                updateQueueUiState();
+            }
+
+            function setPcAreaPlayControlsVisible(isVisible) {
+                if (!pcAreaPlayControls) {
+                    return;
+                }
+                pcAreaPlayControls.hidden = !isVisible;
+            }
+
+            function isPcAreaVisible() {
+                return Boolean(pcAreaScreen && !pcAreaScreen.hidden);
+            }
+
+            function setMobileLoadingVisible(isVisible) {
+                if (!mobileLoadingOverlay) {
+                    return;
+                }
+                mobileLoadingOverlay.hidden = !isVisible;
+                mobileLoadingOverlay.setAttribute("aria-hidden", isVisible ? "false" : "true");
+            }
+
+            function setPcToastVisible(isVisible, message = "") {
+                if (!pcToast) {
+                    return;
+                }
+                if (pcToastTimeoutId) {
+                    window.clearTimeout(pcToastTimeoutId);
+                    pcToastTimeoutId = null;
+                }
+                if (isVisible) {
+                    pcToast.textContent = String(message || "Khong du so du. Vui long nap them tien.");
+                    pcToast.hidden = false;
+                    pcToastTimeoutId = window.setTimeout(() => {
+                        pcToast.hidden = true;
+                    }, 3000);
+                    return;
+                }
+                pcToast.hidden = true;
+            }
+
+            function updateQueueLineDisplays() {
+                if (pcQueueLine) {
+                    pcQueueLine.textContent = String(queueLineNumber);
+                }
+                if (pcQueueWidgetLine) {
+                    pcQueueWidgetLine.textContent = String(queueLineNumber);
+                }
+            }
+
+            function clearQueueTimers() {
+                if (queueJoinTimeoutId) {
+                    window.clearTimeout(queueJoinTimeoutId);
+                    queueJoinTimeoutId = null;
+                }
+                if (queueTickIntervalId) {
+                    window.clearInterval(queueTickIntervalId);
+                    queueTickIntervalId = null;
+                }
+            }
+
+            function updateQueueUiState() {
+                if (!queueIsActive) {
+                    setPcAreaPlayControlsVisible(true);
+                    if (pcQueueBanner) {
+                        pcQueueBanner.hidden = true;
+                    }
+                    if (pcQueueWidget) {
+                        pcQueueWidget.hidden = true;
+                    }
+                    return;
+                }
+
+                setPcAreaPlayControlsVisible(false);
+                if (pcQueueToggleButton) {
+                    pcQueueToggleButton.textContent = queueIsCollapsed ? "⌃" : "⌄";
+                }
+
+                if (isPcAreaVisible()) {
+                    if (pcQueueBanner) {
+                        pcQueueBanner.hidden = queueIsCollapsed;
+                    }
+                    if (pcQueueWidget) {
+                        pcQueueWidget.hidden = !queueIsCollapsed;
+                    }
+                    return;
+                }
+
+                if (pcQueueBanner) {
+                    pcQueueBanner.hidden = true;
+                }
+                if (pcQueueWidget) {
+                    pcQueueWidget.hidden = false;
+                }
+            }
+
+            function setQueueCollapsed(isCollapsed) {
+                queueIsCollapsed = Boolean(isCollapsed);
+                updateQueueUiState();
+            }
+
+            function stopQueueState() {
+                queueIsActive = false;
+                clearQueueTimers();
+                setQueueCollapsed(false);
+                updateQueueUiState();
+            }
+
+            function runLaunchLoading(gameTitle) {
+                const safeGameTitle = String(gameTitle || selectedPcGameTitle || "").trim();
+                setMobileLoadingVisible(true);
+                window.setTimeout(() => {
+                    setMobileLoadingVisible(false);
+                    openCloudPc(safeGameTitle);
+                }, 1500);
+            }
+
+            function startQueueState() {
+                clearQueueTimers();
+                queueIsActive = true;
+                setPcToastVisible(false);
+                queueLineNumber = randomPing(16, 29);
+                updateQueueLineDisplays();
+                if (pcQueueWidgetCopy) {
+                    pcQueueWidgetCopy.textContent = "Dang cho toi luot. Khoang 15p nua se vao duoc may.";
+                }
+                setQueueCollapsed(false);
+
+                queueTickIntervalId = window.setInterval(() => {
+                    if (!queueIsActive) {
+                        return;
+                    }
+                    if (queueLineNumber > 1) {
+                        queueLineNumber -= 1;
+                        updateQueueLineDisplays();
+                    }
+                }, 20000);
+
+                queueJoinTimeoutId = window.setTimeout(() => {
+                    if (!queueIsActive) {
+                        return;
+                    }
+                    stopQueueState();
+                    runLaunchLoading(pendingPcLaunchGameTitle);
+                }, QUEUE_ENTRY_DELAY_MS);
+            }
+
+            function selectPcAreaServer(serverId) {
+                const matched = getAreaServerById(serverId) || getAreaServerById("pay-sea2");
+                selectedAreaServerId = matched ? matched.id : "pay-sea2";
+                renderPcAreaServers();
+            }
+
+            function openPcAreaScreen() {
+                if (!isMobileLoggedIn()) {
+                    requestLogin({
+                        type: "open_pc_area",
+                        reason: "Dang nhap truoc de mo man hinh chon may chu."
+                    });
+                    return;
+                }
+                pendingPcLaunchGameTitle = String(selectedPcGameTitle || "").trim();
+                if (!queueIsActive) {
+                    refreshPcAreaServerPings();
+                }
+                renderPcAreaServers();
+                setPcToastVisible(false);
+                setPcAreaVisible(true);
+            }
+
+            function closePcAreaScreen() {
+                setPcToastVisible(false);
+                setPcAreaVisible(false);
+            }
+
+            function handlePcAreaPlay() {
+                const selectedServer = getAreaServerById(selectedAreaServerId);
+                if (!selectedServer) {
+                    return;
+                }
+
+                if (selectedServer.mode === "direct") {
+                    const currentCoins = getCurrentCoinBalance();
+                    if (currentCoins >= DIRECT_SERVER_COST) {
+                        stopQueueState();
+                        setPcToastVisible(false);
+                        runLaunchLoading(pendingPcLaunchGameTitle);
+                        return;
+                    }
+                    setPcToastVisible(true, "Khong du so du, vui long nap them tien.");
+                    return;
+                }
+
+                startQueueState();
             }
 
             function renderPcGameStrip(games) {
@@ -1663,6 +2439,9 @@
                     });
                     return;
                 }
+                if (safeTab !== "pc") {
+                    closePcAreaScreen();
+                }
                 tabButtons.forEach((button) => {
                     const isActive = button.dataset.tab === safeTab;
                     button.classList.toggle("is-active", isActive);
@@ -1725,6 +2504,12 @@
                     openCloudPc(targetGame);
                     return;
                 }
+                if (pendingProtectedRequest?.type === "open_pc_area") {
+                    pendingProtectedRequest = null;
+                    setTab("pc");
+                    openPcAreaScreen();
+                    return;
+                }
                 if (pendingProtectedRequest?.type === "open_topup") {
                     pendingProtectedRequest = null;
                     setMeTopupVisible(true);
@@ -1745,6 +2530,15 @@
             homeGamesSearchInput?.addEventListener("input", () => {
                 applyHomeGamesSearch();
             });
+            homeGamesGrid?.addEventListener("click", (event) => {
+                const target = event.target instanceof Element
+                    ? event.target.closest("[data-home-game]")
+                    : null;
+                if (!target) {
+                    return;
+                }
+                openPlayConfirm(target.getAttribute("data-home-game") || "");
+            });
             pcStripRefreshButton?.addEventListener("click", () => {
                 loadHomeGamesFromDesktop();
             });
@@ -1758,10 +2552,10 @@
                 openPlayConfirm(target.getAttribute("data-pc-game") || "");
             });
             pcConnectButton?.addEventListener("click", () => {
-                openCloudPc();
+                openPcAreaScreen();
             });
             pcPlayButton?.addEventListener("click", () => {
-                openCloudPc();
+                openPcAreaScreen();
             });
             meLogoutButton?.addEventListener("click", () => {
                 mobileAccount = null;
@@ -1800,7 +2594,59 @@
             });
             playConfirmAcceptButton?.addEventListener("click", () => {
                 setPlayConfirmVisible(false);
-                openCloudPc(selectedPcGameTitle);
+                setTab("pc");
+            });
+            pcAreaBackButton?.addEventListener("click", () => {
+                closePcAreaScreen();
+            });
+            pcAreaPlayButton?.addEventListener("click", () => {
+                handlePcAreaPlay();
+            });
+            pcAreaRetryButton?.addEventListener("click", () => {
+                refreshPcAreaServerPings();
+                renderPcAreaServers();
+                pcAreaRetryButton.classList.add("is-running");
+                window.setTimeout(() => {
+                    pcAreaRetryButton.classList.remove("is-running");
+                }, 320);
+            });
+            pcAreaExperienceGrid?.addEventListener("click", (event) => {
+                const target = event.target instanceof Element
+                    ? event.target.closest("[data-area-server]")
+                    : null;
+                if (!target) {
+                    return;
+                }
+                const nextServerId = target.getAttribute("data-area-server") || "";
+                selectPcAreaServer(nextServerId);
+            });
+            pcAreaPaymentGrid?.addEventListener("click", (event) => {
+                const target = event.target instanceof Element
+                    ? event.target.closest("[data-area-server]")
+                    : null;
+                if (!target) {
+                    return;
+                }
+                const nextServerId = target.getAttribute("data-area-server") || "";
+                selectPcAreaServer(nextServerId);
+            });
+            pcQueueCancelButton?.addEventListener("click", () => {
+                stopQueueState();
+            });
+            pcQueueToggleButton?.addEventListener("click", () => {
+                if (!queueIsActive) {
+                    return;
+                }
+                setQueueCollapsed(true);
+            });
+            pcQueueWidgetToggleButton?.addEventListener("click", () => {
+                if (!queueIsActive) {
+                    return;
+                }
+                if (!isPcAreaVisible()) {
+                    setPcAreaVisible(true);
+                }
+                setQueueCollapsed(false);
             });
             meTopupCloseButton?.addEventListener("click", () => {
                 setMeTopupVisible(false);
