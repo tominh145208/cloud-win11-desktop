@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -38,8 +38,8 @@
         }
 
         .topbar {
-            height: 64px;
-            padding: 12px 16px;
+            height: 62px;
+            padding: 10px 12px 9px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -54,13 +54,13 @@
         .brand {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .brand img {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
             border: 1px solid var(--line);
         }
 
@@ -83,11 +83,11 @@
             text-decoration: none;
             border: 1px solid rgba(244, 198, 73, 0.4);
             border-radius: 999px;
-            padding: 7px 12px;
+            padding: 7px 11px;
         }
 
         .content {
-            padding: 16px 16px calc(90px + env(safe-area-inset-bottom));
+            padding: 10px 12px calc(82px + env(safe-area-inset-bottom));
         }
 
         .panel {
@@ -204,7 +204,7 @@
         }
 
         .home-games {
-            margin-top: 14px;
+            margin-top: 8px;
             border: 0;
             border-radius: 0;
             padding: 0;
@@ -216,18 +216,18 @@
             align-items: center;
             justify-content: space-between;
             gap: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
 
         .home-games-head strong {
-            font-size: 14px;
+            font-size: 13px;
             letter-spacing: 0.04em;
             text-transform: uppercase;
         }
 
         .home-games-head span {
             color: var(--sub);
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .home-games-refresh {
@@ -235,15 +235,15 @@
             background: rgba(244, 198, 73, 0.08);
             color: var(--gold-soft);
             border-radius: 999px;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             letter-spacing: 0.04em;
-            padding: 6px 10px;
+            padding: 5px 9px;
             cursor: pointer;
         }
 
         .home-games-search {
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .home-games-search input {
@@ -252,8 +252,8 @@
             border-radius: 11px;
             background: rgba(255, 255, 255, 0.03);
             color: var(--text);
-            font-size: 14px;
-            padding: 10px 12px;
+            font-size: 13px;
+            padding: 8px 10px;
             outline: none;
         }
 
@@ -265,44 +265,44 @@
         .home-games-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
+            gap: 8px;
         }
 
         .home-game-card {
             display: grid;
-            gap: 8px;
+            gap: 6px;
             border: 1px solid var(--line);
-            border-radius: 12px;
+            border-radius: 10px;
             background: rgba(17, 18, 20, 0.92);
             overflow: hidden;
         }
 
         .home-game-thumb {
             width: 100%;
-            aspect-ratio: 460 / 215;
+            aspect-ratio: 460 / 190;
             object-fit: cover;
             display: block;
             background: #111;
         }
 
         .home-game-meta {
-            padding: 0 9px 10px;
+            padding: 0 8px 8px;
             display: grid;
-            gap: 4px;
+            gap: 3px;
         }
 
         .home-game-title {
             margin: 0;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             line-height: 1.3;
-            min-height: 32px;
+            min-height: 28px;
         }
 
         .home-game-sub {
             margin: 0;
             color: var(--sub);
-            font-size: 11px;
+            font-size: 10px;
             line-height: 1.3;
         }
 
@@ -316,6 +316,622 @@
             font-size: 13px;
         }
 
+        .pc-shell {
+            border: 0;
+            border-radius: 0;
+            padding: 0;
+            background: transparent;
+            display: grid;
+            gap: 10px;
+        }
+
+        .pc-title {
+            margin: 0;
+            font-size: 17px;
+            line-height: 1.2;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--gold-soft);
+        }
+
+        .pc-connect-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+        }
+
+        .pc-connect-input {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font-size: 12px;
+            padding: 8px 12px;
+            outline: none;
+        }
+
+        .pc-connect-input:focus {
+            border-color: rgba(244, 198, 73, 0.45);
+        }
+
+        .pc-connect-btn {
+            border: 1px solid rgba(244, 198, 73, 0.42);
+            border-radius: 999px;
+            background: linear-gradient(120deg, var(--gold), #d9a931);
+            color: #1b1b1b;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 8px 14px;
+            cursor: pointer;
+        }
+
+        .pc-strip-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .pc-strip-head strong {
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .pc-strip-refresh {
+            border: 0;
+            background: transparent;
+            color: #d7d7d7;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .pc-strip {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(118px, 1fr);
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .pc-strip-empty {
+            border: 1px dashed var(--line);
+            border-radius: 10px;
+            min-height: 72px;
+            padding: 10px;
+            color: var(--sub);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pc-game-btn {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: rgba(17, 18, 20, 0.92);
+            color: var(--text);
+            display: grid;
+            gap: 6px;
+            padding: 6px;
+            text-align: left;
+            cursor: pointer;
+            min-height: 96px;
+        }
+
+        .pc-game-btn img {
+            width: 100%;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 7px;
+            display: block;
+        }
+
+        .pc-game-btn strong {
+            display: block;
+            font-size: 11px;
+            line-height: 1.25;
+            min-height: 27px;
+        }
+
+        .pc-play-row {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: rgba(17, 18, 20, 0.75);
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .pc-play-row p {
+            margin: 0;
+            color: #cfcfcf;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .pc-play-btn {
+            border: 1px solid rgba(244, 198, 73, 0.42);
+            border-radius: 999px;
+            background: linear-gradient(120deg, var(--gold), #d9a931);
+            color: #1d1d1d;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 8px 16px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .pc-step-title {
+            margin: 0;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--gold-soft);
+        }
+
+        .pc-step {
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            padding: 9px 10px;
+            background: rgba(255, 255, 255, 0.02);
+            color: #d2d2d2;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .play-confirm {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: grid;
+            place-items: center;
+            background: rgba(6, 7, 10, 0.72);
+            padding: 18px;
+        }
+
+        .play-confirm[hidden] {
+            display: none;
+        }
+
+        .play-confirm-card {
+            width: min(330px, 100%);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #15171a;
+            padding: 14px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .play-confirm-card strong {
+            font-size: 15px;
+        }
+
+        .play-confirm-card p {
+            margin: 0;
+            color: #c2c6cf;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .play-confirm-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .play-confirm-btn {
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+
+        .play-confirm-btn.primary {
+            border-color: rgba(244, 198, 73, 0.42);
+            background: linear-gradient(120deg, var(--gold), #d9a931);
+            color: #1d1d1d;
+        }
+
+        .me-shell {
+            border: 0;
+            border-radius: 0;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 86% -12%, rgba(244, 198, 73, 0.14), transparent 42%),
+                linear-gradient(180deg, rgba(24, 24, 26, 0.94), rgba(14, 14, 16, 0.98));
+        }
+
+        .me-top {
+            padding: 12px;
+            background:
+                radial-gradient(circle at 86% -12%, rgba(244, 198, 73, 0.2), transparent 45%),
+                linear-gradient(160deg, rgba(28, 28, 30, 0.96), rgba(18, 18, 20, 0.98));
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .me-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+            background: #131722;
+        }
+
+        .me-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .me-name {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #f2f3f5;
+        }
+
+        .me-id {
+            margin: 2px 0 0;
+            font-size: 11px;
+            color: #c4c9d4;
+        }
+
+        .me-body {
+            padding: 10px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .me-promo {
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 9px;
+            padding: 8px 10px;
+            font-size: 11px;
+            color: #d8dce6;
+            background: rgba(255, 255, 255, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .me-coins {
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 9px;
+            padding: 8px 10px;
+            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .me-coins strong {
+            font-size: 13px;
+            letter-spacing: 0.03em;
+        }
+
+        .me-coins small {
+            display: block;
+            color: #c7ccd8;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .me-buy-btn {
+            border: 1px solid rgba(244, 198, 73, 0.42);
+            border-radius: 999px;
+            background: linear-gradient(120deg, var(--gold), #d9a931);
+            color: #1d1d1d;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+
+        .me-topup-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 72;
+            display: grid;
+            place-items: center;
+            background: rgba(7, 8, 12, 0.78);
+            padding: 12px;
+        }
+
+        .me-topup-modal[hidden] {
+            display: none;
+        }
+
+        .me-topup-card {
+            width: min(360px, 100%);
+            max-height: 82vh;
+            overflow: auto;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 12px;
+            background: linear-gradient(160deg, rgba(20, 20, 22, 0.98), rgba(14, 14, 16, 0.98));
+            padding: 12px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .me-topup-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .me-topup-head strong {
+            font-size: 15px;
+            color: var(--gold-soft);
+        }
+
+        .me-topup-close {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #e7ebf3;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+        .me-topup-item {
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .me-topup-toggle {
+            width: 100%;
+            border: 0;
+            background: rgba(255, 255, 255, 0.03);
+            color: #eef1f8;
+            padding: 9px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .me-topup-body {
+            padding: 10px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .me-topup-bank-panel {
+            display: grid;
+            gap: 10px;
+        }
+
+        .me-topup-qr-wrap {
+            width: 116px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.03);
+            display: grid;
+            justify-items: center;
+            gap: 5px;
+            padding: 7px;
+            cursor: zoom-in;
+        }
+
+        .me-topup-qr-wrap img {
+            width: 96px;
+            height: 96px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .me-topup-qr-wrap span {
+            font-size: 10px;
+            color: #cfd5e1;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .me-topup-copy {
+            display: grid;
+            gap: 8px;
+        }
+
+        .me-topup-copy strong {
+            display: block;
+            color: #eff2f8;
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .me-topup-copy p {
+            margin: 0;
+            color: #c8cfdb;
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .qr-zoom-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 74;
+            display: grid;
+            place-items: center;
+            background: rgba(4, 5, 8, 0.84);
+            padding: 14px;
+        }
+
+        .qr-zoom-modal[hidden] {
+            display: none;
+        }
+
+        .qr-zoom-card {
+            width: min(360px, 100%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            background: #16181c;
+            padding: 12px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .qr-zoom-card img {
+            width: 100%;
+            border-radius: 10px;
+            display: block;
+            background: #fff;
+        }
+
+        .qr-zoom-card p {
+            margin: 0;
+            text-align: center;
+            color: #c9ced9;
+            font-size: 12px;
+        }
+
+        .me-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px 10px;
+        }
+
+        .me-grid-btn {
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.015);
+            color: #e4e8f1;
+            min-height: 74px;
+            padding: 8px 6px;
+            display: grid;
+            justify-items: center;
+            align-content: center;
+            gap: 6px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .me-grid-btn svg {
+            width: 18px;
+            height: 18px;
+            opacity: 0.92;
+        }
+
+        .auth-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 70;
+            display: grid;
+            place-items: center;
+            background: rgba(7, 8, 12, 0.74);
+            padding: 14px;
+        }
+
+        .auth-modal[hidden] {
+            display: none;
+        }
+
+        .auth-card {
+            width: min(340px, 100%);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #14181f;
+            padding: 14px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .auth-card strong {
+            font-size: 15px;
+        }
+
+        .auth-card p {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #c7ced8;
+        }
+
+        .auth-field {
+            display: grid;
+            gap: 6px;
+        }
+
+        .auth-field span {
+            font-size: 11px;
+            color: #d8deea;
+            letter-spacing: 0.02em;
+        }
+
+        .auth-field input {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font-size: 13px;
+            padding: 8px 10px;
+            outline: none;
+        }
+
+        .auth-field input:focus {
+            border-color: rgba(244, 198, 73, 0.45);
+        }
+
+        .auth-error {
+            min-height: 17px;
+            color: #ff8f8f;
+            font-size: 11px;
+        }
+
+        .auth-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .auth-btn {
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #e7ebf3;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+
+        .auth-btn.primary {
+            border-color: rgba(244, 198, 73, 0.42);
+            background: linear-gradient(120deg, var(--gold), #d9a931);
+            color: #1d1d1d;
+        }
+
         .bottom-nav {
             position: fixed;
             left: 0;
@@ -325,10 +941,10 @@
             border-top: 1px solid var(--line);
             background: rgba(15, 15, 16, 0.94);
             backdrop-filter: blur(8px);
-            padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+            padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            gap: 6px;
         }
 
         .tab-btn {
@@ -336,17 +952,17 @@
             background: transparent;
             color: #9ea3ac;
             border-radius: 12px;
-            min-height: 58px;
+            min-height: 52px;
             display: grid;
             place-items: center;
             gap: 4px;
-            font-size: 11px;
+            font-size: 10px;
             cursor: pointer;
         }
 
         .tab-btn .icon {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             display: block;
         }
 
@@ -420,33 +1036,163 @@
             </section>
 
             <section class="panel" data-panel="pc" hidden>
-                <div class="cards">
-                    <article class="card">
-                        <h2>Cloud PC</h2>
-                        <p>Bat desktop cloud de vao giao dien PC day du, chay app va game nhu may tinh.</p>
-                        <a class="cta" href="index.html?fromIntro=1">Mo Cloud PC</a>
-                    </article>
-                    <article class="card">
-                        <h2>Trang thai ket noi</h2>
-                        <p>Ping thap va ket noi on dinh se giup choi game muot hon tren dien thoai.</p>
-                    </article>
-                </div>
+                <section class="pc-shell" aria-label="Connect cloud pc">
+                    <h2 class="pc-title">Connect to Limore Cloud PC</h2>
+                    <div class="pc-connect-row">
+                        <input id="pc-connect-input" class="pc-connect-input" type="text" placeholder="Nhap desktop code hoac ID">
+                        <button id="pc-connect-button" class="pc-connect-btn" type="button">Connect</button>
+                    </div>
+                    <div class="pc-strip-head">
+                        <strong>List Game</strong>
+                        <button id="pc-strip-refresh" class="pc-strip-refresh" type="button">Refresh</button>
+                    </div>
+                    <div id="pc-game-strip" class="pc-strip"></div>
+                    <div class="pc-play-row">
+                        <p>Play your PC games on mobile.<br>Streaming on cloud with low latency.</p>
+                        <button id="pc-play-button" class="pc-play-btn" type="button">Play</button>
+                    </div>
+                    <p class="pc-step-title">Step 1</p>
+                    <div class="pc-step">Install cloud gaming windows client or mo Cloud PC desktop mode.</div>
+                    <p class="pc-step-title">Step 2</p>
+                    <div class="pc-step">Refresh danh sach game va chon game ban muon choi.</div>
+                    <p class="pc-step-title">Step 3</p>
+                    <div class="pc-step">Nhan Play hoac Connect de vao may PC cloud ngay.</div>
+                </section>
             </section>
 
             <section class="panel" data-panel="me" hidden>
-                <div class="cards">
-                    <article class="card">
-                        <h2>Toi</h2>
-                        <p>Quan ly tai khoan, thong bao va lien ket ho tro. Ban co the tuy chinh tu day.</p>
-                    </article>
-                    <article class="card">
-                        <h2>Ho tro nhanh</h2>
-                        <p>Nhan vao Telegram de lien he admin khi can mo rong game hoac xu ly loi.</p>
-                        <a class="cta" href="https://t.me/limorecloudgame" target="_blank" rel="noopener noreferrer">Mo Telegram</a>
-                    </article>
-                </div>
+                <section class="me-shell" aria-label="Trang toi">
+                    <header class="me-top">
+                        <div class="me-avatar">
+                            <img src="assets/lc-avatar.png" alt="User avatar">
+                        </div>
+                        <div>
+                            <p id="me-username" class="me-name">Nguoi dung</p>
+                            <p id="me-userid" class="me-id">ID: guest</p>
+                        </div>
+                    </header>
+                    <div class="me-body">
+                        <div class="me-promo">
+                            <span>Invite new users to win FREE GAME TIME</span>
+                            <strong>&gt;&gt;</strong>
+                        </div>
+                        <div class="me-coins">
+                            <div>
+                                <strong id="me-coins-value">0 COINS</strong>
+                                <small>Exchange game time or Limore cloud PC time</small>
+                            </div>
+                            <button id="me-buy-button" class="me-buy-btn" type="button">BUY</button>
+                        </div>
+                        <div class="me-grid">
+                            <button class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18"/></svg>
+                                <span>Invite code</span>
+                            </button>
+                            <button class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12v18H6zM9 7h6M9 12h6"/></svg>
+                                <span>Order record</span>
+                            </button>
+                            <button class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 8h10M7 12h10M7 16h10"/><rect x="3" y="5" width="18" height="14" rx="3"/></svg>
+                                <span>Discord</span>
+                            </button>
+                            <button class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M9 9h.01M15 9h.01M8.5 14c1.1 1.2 2.2 1.8 3.5 1.8s2.4-.6 3.5-1.8"/></svg>
+                                <span>About us</span>
+                            </button>
+                            <button class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v12H4z"/><path d="m7 16 5-4 5 4"/></svg>
+                                <span>Feedback</span>
+                            </button>
+                            <button class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h16M6 8v9h12V8M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                                <span>Redeem</span>
+                            </button>
+                            <button class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 15V9l6-4 6 4v6l-6 4-6-4Z"/></svg>
+                                <span>Get game time</span>
+                            </button>
+                            <button class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v3M12 18v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M3 12h3M18 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/><circle cx="12" cy="12" r="4"/></svg>
+                                <span>Settings</span>
+                            </button>
+                            <button id="me-logout-button" class="me-grid-btn" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17 15 12 10 7"/><path d="M15 12H3"/></svg>
+                                <span>Dang xuat</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
             </section>
         </main>
+    </div>
+
+    <div id="auth-modal" class="auth-modal" hidden aria-hidden="true">
+        <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+            <strong id="auth-title">Dang nhap tai khoan</strong>
+            <p id="auth-subtitle">Dang nhap truoc de mo tab nay.</p>
+            <label class="auth-field">
+                <span>Ten dang nhap</span>
+                <input id="auth-username-input" type="text" placeholder="Nguoi dung" maxlength="32">
+            </label>
+            <label class="auth-field">
+                <span>Mat khau</span>
+                <input id="auth-password-input" type="password" placeholder="Nhap mat khau" maxlength="64">
+            </label>
+            <div id="auth-error" class="auth-error"></div>
+            <div class="auth-actions">
+                <button id="auth-cancel-button" class="auth-btn" type="button">Dong</button>
+                <button id="auth-login-button" class="auth-btn primary" type="button">Dang nhap</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="me-topup-modal" class="me-topup-modal" hidden aria-hidden="true">
+        <div class="me-topup-card" role="dialog" aria-modal="true" aria-labelledby="me-topup-title">
+            <div class="me-topup-head">
+                <strong id="me-topup-title">Nap tien tai khoan</strong>
+                <button id="me-topup-close" class="me-topup-close" type="button">Dong</button>
+            </div>
+            <section class="me-topup-item">
+                <button id="me-topup-toggle" class="me-topup-toggle" type="button" aria-expanded="true">
+                    <span>Nap tien tai khoan - ngan hang</span>
+                    <span id="me-topup-toggle-icon">▾</span>
+                </button>
+                <div id="me-topup-content" class="me-topup-body">
+                    <div class="me-topup-bank-panel">
+                        <button id="me-topup-qr-trigger" class="me-topup-qr-wrap" type="button" aria-label="Cham de phong to ma QR">
+                            <img src="assets/qr-bank.png" alt="QR nap tien ngan hang" loading="lazy">
+                            <span>Cham de phong to</span>
+                        </button>
+                        <div class="me-topup-copy">
+                            <strong>Toi thieu nap tien vao tai khoan: 10.000d</strong>
+                            <strong>(Co the nap duoi 10.000d. Neu khong hien so du tai khoan vui long lien he qua Discord de duoc kiem tra)</strong>
+                            <p>Sau khi da thanh toan, so du se duoc cong vao theo so tien tuong ung da nap. (Sau 2-5 phut neu so du khong duoc cong vui long lien he Discord gap de cong kip thoi) (Thoi gian cho xu li khong qua 10 phut)</p>
+                            <p>Khong hoan tra tien da nap duoi moi hinh thuc.(Vui long xem xet ki truoc khi nap)</p>
+                            <p>Vui long F5 / Refresh / Lam moi lai trang sau khi da hoan thanh thanh toan.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="qr-zoom-modal" class="qr-zoom-modal" hidden aria-hidden="true">
+        <div class="qr-zoom-card">
+            <img src="assets/qr-bank.png" alt="QR nap tien phong to">
+            <p>Cham ben ngoai de dong</p>
+        </div>
+    </div>
+
+    <div id="play-confirm-modal" class="play-confirm" hidden aria-hidden="true">
+        <div class="play-confirm-card" role="dialog" aria-modal="true" aria-labelledby="play-confirm-title">
+            <strong id="play-confirm-title">Choi game nay?</strong>
+            <p id="play-confirm-copy">Ban co muon choi game nay khong?</p>
+            <div class="play-confirm-actions">
+                <button id="play-confirm-cancel" class="play-confirm-btn" type="button">Khong</button>
+                <button id="play-confirm-accept" class="play-confirm-btn primary" type="button">Co</button>
+            </div>
+        </div>
     </div>
 
     <nav class="bottom-nav" aria-label="Main tabs">
@@ -478,6 +1224,7 @@
     <script>
         (function setupMainMobileTabs() {
             const INTRO_SESSION_KEY = "limore_intro_passed_session_v1";
+            const MOBILE_ACCOUNT_KEY = "limore_mobile_account_v1";
             const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
             const STEAM_ASSET_BASE_URL = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps";
             const fallbackGames = [
@@ -519,7 +1266,214 @@
             const homeGamesCount = document.getElementById("home-games-count");
             const homeGamesRefreshButton = document.getElementById("home-games-refresh");
             const homeGamesSearchInput = document.getElementById("home-games-search-input");
+            const pcGameStrip = document.getElementById("pc-game-strip");
+            const pcStripRefreshButton = document.getElementById("pc-strip-refresh");
+            const pcConnectButton = document.getElementById("pc-connect-button");
+            const pcPlayButton = document.getElementById("pc-play-button");
+            const meUsername = document.getElementById("me-username");
+            const meUserId = document.getElementById("me-userid");
+            const meCoinsValue = document.getElementById("me-coins-value");
+            const meBuyButton = document.getElementById("me-buy-button");
+            const meLogoutButton = document.getElementById("me-logout-button");
+            const authModal = document.getElementById("auth-modal");
+            const authSubtitle = document.getElementById("auth-subtitle");
+            const authUsernameInput = document.getElementById("auth-username-input");
+            const authPasswordInput = document.getElementById("auth-password-input");
+            const authError = document.getElementById("auth-error");
+            const authCancelButton = document.getElementById("auth-cancel-button");
+            const authLoginButton = document.getElementById("auth-login-button");
+            const meTopupModal = document.getElementById("me-topup-modal");
+            const meTopupCloseButton = document.getElementById("me-topup-close");
+            const meTopupToggleButton = document.getElementById("me-topup-toggle");
+            const meTopupContent = document.getElementById("me-topup-content");
+            const meTopupToggleIcon = document.getElementById("me-topup-toggle-icon");
+            const meTopupQrTrigger = document.getElementById("me-topup-qr-trigger");
+            const qrZoomModal = document.getElementById("qr-zoom-modal");
+            const playConfirmModal = document.getElementById("play-confirm-modal");
+            const playConfirmCopy = document.getElementById("play-confirm-copy");
+            const playConfirmCancelButton = document.getElementById("play-confirm-cancel");
+            const playConfirmAcceptButton = document.getElementById("play-confirm-accept");
             let allHomeGames = [];
+            let selectedPcGameTitle = "";
+            let activeTab = "home";
+            let pendingProtectedRequest = null;
+
+            function normalizeUserId(username) {
+                const base = String(username || "")
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, "_")
+                    .replace(/[^a-z0-9_]/g, "");
+                return base || "nguoi_dung";
+            }
+
+            function loadMobileAccount() {
+                try {
+                    const raw = localStorage.getItem(MOBILE_ACCOUNT_KEY);
+                    const parsed = raw ? JSON.parse(raw) : null;
+                    if (!parsed || typeof parsed !== "object") {
+                        return null;
+                    }
+                    const username = String(parsed.username || "").trim();
+                    const password = String(parsed.password || "");
+                    const userId = String(parsed.userId || normalizeUserId(username));
+                    if (!username || !password) {
+                        return null;
+                    }
+                    return { username, password, userId };
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            function persistMobileAccount(account) {
+                try {
+                    localStorage.setItem(MOBILE_ACCOUNT_KEY, JSON.stringify(account));
+                    localStorage.setItem("win11_current_user_id_v1", String(account.userId || ""));
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+                syncDesktopProfileCache(account);
+            }
+
+            function clearMobileAccount() {
+                try {
+                    localStorage.removeItem(MOBILE_ACCOUNT_KEY);
+                    localStorage.removeItem("win11_current_user_id_v1");
+                } catch (error) {
+                    // Ignore storage failures.
+                }
+            }
+
+            let mobileAccount = loadMobileAccount();
+
+            function isMobileLoggedIn() {
+                return Boolean(mobileAccount?.username && mobileAccount?.password);
+            }
+
+            function refreshMeProfile() {
+                const username = isMobileLoggedIn() ? mobileAccount.username : "Nguoi dung";
+                const userId = isMobileLoggedIn() ? mobileAccount.userId : "guest";
+                if (meUsername) {
+                    meUsername.textContent = username;
+                }
+                if (meUserId) {
+                    meUserId.textContent = `ID: ${userId}`;
+                }
+                if (meCoinsValue) {
+                    meCoinsValue.textContent = "0 COINS";
+                }
+            }
+
+            function syncDesktopProfileCache(account) {
+                if (!account?.username || !account?.userId) {
+                    return;
+                }
+                const nextUser = {
+                    id: String(account.userId),
+                    desktopName: String(account.username),
+                    limoreName: String(account.username),
+                    balance: 0,
+                    activePackageId: "",
+                    locked: false
+                };
+                let nextUsersPayload = [nextUser];
+
+                try {
+                    const raw = localStorage.getItem("win11_limore_admin_data_v1");
+                    const parsed = raw ? JSON.parse(raw) : {};
+                    const users = Array.isArray(parsed?.users) ? parsed.users : [];
+                    const existingIndex = users.findIndex((user) => String(user?.id || "") === nextUser.id);
+                    const nextUsers = existingIndex >= 0
+                        ? users.map((user, index) => index === existingIndex ? {
+                            ...user,
+                            id: nextUser.id,
+                            desktopName: nextUser.desktopName,
+                            limoreName: nextUser.limoreName
+                        } : user)
+                        : [...users, nextUser];
+                    nextUsersPayload = nextUsers;
+                    const nextData = {
+                        ...(parsed || {}),
+                        users: nextUsers,
+                        state: {
+                            ...((parsed && parsed.state) ? parsed.state : {}),
+                            currentUserId: nextUser.id,
+                            setupComplete: true
+                        }
+                    };
+                    localStorage.setItem("win11_limore_admin_data_v1", JSON.stringify(nextData));
+                } catch (error) {
+                    // Ignore storage sync failures.
+                }
+
+                fetch(LIMORE_ADMIN_DATA_API, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        users: nextUsersPayload,
+                        state: {
+                            currentUserId: nextUser.id,
+                            setupComplete: true
+                        }
+                    })
+                }).catch(() => {});
+            }
+
+            function setAuthModalVisible(isVisible, reason = "Dang nhap truoc de mo tab nay.") {
+                if (!authModal) {
+                    return;
+                }
+                authModal.hidden = !isVisible;
+                authModal.setAttribute("aria-hidden", isVisible ? "false" : "true");
+                if (authSubtitle) {
+                    authSubtitle.textContent = reason;
+                }
+                if (authError) {
+                    authError.textContent = "";
+                }
+                if (isVisible) {
+                    if (authUsernameInput) {
+                        authUsernameInput.value = mobileAccount?.username || "";
+                    }
+                    if (authPasswordInput) {
+                        authPasswordInput.value = mobileAccount?.password || "";
+                    }
+                    window.setTimeout(() => authUsernameInput?.focus(), 40);
+                }
+            }
+
+            function requestLogin(requestPayload) {
+                pendingProtectedRequest = requestPayload;
+                setAuthModalVisible(true, requestPayload?.reason || "Dang nhap truoc de tiep tuc.");
+            }
+
+            function setMeTopupVisible(isVisible) {
+                if (!meTopupModal) {
+                    return;
+                }
+                meTopupModal.hidden = !isVisible;
+                meTopupModal.setAttribute("aria-hidden", isVisible ? "false" : "true");
+            }
+
+            function setQrZoomVisible(isVisible) {
+                if (!qrZoomModal) {
+                    return;
+                }
+                qrZoomModal.hidden = !isVisible;
+                qrZoomModal.setAttribute("aria-hidden", isVisible ? "false" : "true");
+            }
+
+            function openTopupModal() {
+                if (!isMobileLoggedIn()) {
+                    requestLogin({
+                        type: "open_topup",
+                        reason: "Dang nhap truoc de nap tien."
+                    });
+                    return;
+                }
+                setMeTopupVisible(true);
+            }
 
             function buildSteamHeaderImage(appId) {
                 return `${STEAM_ASSET_BASE_URL}/${appId}/header.jpg`;
@@ -586,6 +1540,56 @@
                 `).join("");
             }
 
+            function openCloudPc(gameTitle = "") {
+                if (!isMobileLoggedIn()) {
+                    requestLogin({
+                        type: "open_pc",
+                        gameTitle,
+                        reason: "Dang nhap truoc de vao Cloud PC."
+                    });
+                    return;
+                }
+                const target = gameTitle
+                    ? `index.html?fromIntro=1&game=${encodeURIComponent(gameTitle)}`
+                    : "index.html?fromIntro=1";
+                window.location.href = target;
+            }
+
+            function setPlayConfirmVisible(isVisible) {
+                if (!playConfirmModal) {
+                    return;
+                }
+                playConfirmModal.hidden = !isVisible;
+                playConfirmModal.setAttribute("aria-hidden", isVisible ? "false" : "true");
+            }
+
+            function openPlayConfirm(gameTitle) {
+                selectedPcGameTitle = String(gameTitle || "").trim();
+                if (playConfirmCopy) {
+                    playConfirmCopy.textContent = selectedPcGameTitle
+                        ? `Ban co muon choi \"${selectedPcGameTitle}\" khong?`
+                        : "Ban co muon choi game nay khong?";
+                }
+                setPlayConfirmVisible(true);
+            }
+
+            function renderPcGameStrip(games) {
+                if (!pcGameStrip) {
+                    return;
+                }
+                const sourceGames = Array.isArray(games) ? games.slice(0, 20) : [];
+                if (!sourceGames.length) {
+                    pcGameStrip.innerHTML = `<div class="pc-strip-empty">Chua co game de ket noi.</div>`;
+                    return;
+                }
+                pcGameStrip.innerHTML = sourceGames.map((game) => `
+                    <button class="pc-game-btn" type="button" data-pc-game="${String(game.title || "").replace(/"/g, "&quot;")}">
+                        <img src="${game.image}" alt="${game.title}" loading="lazy">
+                        <strong>${game.title}</strong>
+                    </button>
+                `).join("");
+            }
+
             function applyHomeGamesSearch() {
                 const keyword = String(homeGamesSearchInput?.value || "").trim().toLowerCase();
                 if (!keyword) {
@@ -628,32 +1632,104 @@
                         const localGames = selectHomeGames(getGamesFromLocalCache());
                         allHomeGames = localGames.length ? localGames : selectHomeGames(fallbackGames);
                         applyHomeGamesSearch();
+                        renderPcGameStrip(allHomeGames);
                         return;
                     }
                     allHomeGames = selected.length < 12
                         ? mergeUniqueGames(selected, selectHomeGames(fallbackGames))
                         : selected;
                     applyHomeGamesSearch();
+                    renderPcGameStrip(allHomeGames);
                 } catch (error) {
                     const localGames = selectHomeGames(getGamesFromLocalCache());
                     const primaryGames = localGames.length ? localGames : [];
                     allHomeGames = mergeUniqueGames(primaryGames, selectHomeGames(fallbackGames));
                     applyHomeGamesSearch();
+                    renderPcGameStrip(allHomeGames);
                 }
             }
 
             function setTab(nextTab) {
+                const safeTab = String(nextTab || "home");
+                const needsAuth = safeTab === "pc" || safeTab === "me";
+                if (needsAuth && !isMobileLoggedIn()) {
+                    requestLogin({
+                        type: "open_tab",
+                        tab: safeTab,
+                        reason: safeTab === "me"
+                            ? "Dang nhap truoc de mo tab Toi."
+                            : "Dang nhap truoc de mo tab PC."
+                    });
+                    return;
+                }
                 tabButtons.forEach((button) => {
-                    const isActive = button.dataset.tab === nextTab;
+                    const isActive = button.dataset.tab === safeTab;
                     button.classList.toggle("is-active", isActive);
                     button.setAttribute("aria-selected", isActive ? "true" : "false");
                 });
 
                 panels.forEach((panel) => {
-                    const isActive = panel.dataset.panel === nextTab;
+                    const isActive = panel.dataset.panel === safeTab;
                     panel.classList.toggle("is-active", isActive);
                     panel.hidden = !isActive;
                 });
+                activeTab = safeTab;
+            }
+
+            function submitAuthLogin() {
+                const username = String(authUsernameInput?.value || "").trim();
+                const password = String(authPasswordInput?.value || "");
+                if (!username) {
+                    if (authError) {
+                        authError.textContent = "Nhap ten dang nhap.";
+                    }
+                    return;
+                }
+                if (password.length < 4) {
+                    if (authError) {
+                        authError.textContent = "Mat khau toi thieu 4 ky tu.";
+                    }
+                    return;
+                }
+
+                if (mobileAccount) {
+                    const matched = username === mobileAccount.username && password === mobileAccount.password;
+                    if (!matched) {
+                        if (authError) {
+                            authError.textContent = "Sai ten dang nhap hoac mat khau.";
+                        }
+                        return;
+                    }
+                } else {
+                    mobileAccount = {
+                        username,
+                        password,
+                        userId: normalizeUserId(username)
+                    };
+                }
+
+                persistMobileAccount(mobileAccount);
+                refreshMeProfile();
+                setAuthModalVisible(false);
+
+                if (pendingProtectedRequest?.type === "open_tab") {
+                    const targetTab = pendingProtectedRequest.tab || "home";
+                    pendingProtectedRequest = null;
+                    setTab(targetTab);
+                    return;
+                }
+                if (pendingProtectedRequest?.type === "open_pc") {
+                    const targetGame = pendingProtectedRequest.gameTitle || "";
+                    pendingProtectedRequest = null;
+                    openCloudPc(targetGame);
+                    return;
+                }
+                if (pendingProtectedRequest?.type === "open_topup") {
+                    pendingProtectedRequest = null;
+                    setMeTopupVisible(true);
+                    return;
+                }
+                pendingProtectedRequest = null;
             }
 
             tabButtons.forEach((button) => {
@@ -668,9 +1744,96 @@
             homeGamesSearchInput?.addEventListener("input", () => {
                 applyHomeGamesSearch();
             });
+            pcStripRefreshButton?.addEventListener("click", () => {
+                loadHomeGamesFromDesktop();
+            });
+            pcGameStrip?.addEventListener("click", (event) => {
+                const target = event.target instanceof Element
+                    ? event.target.closest("[data-pc-game]")
+                    : null;
+                if (!target) {
+                    return;
+                }
+                openPlayConfirm(target.getAttribute("data-pc-game") || "");
+            });
+            pcConnectButton?.addEventListener("click", () => {
+                openCloudPc();
+            });
+            pcPlayButton?.addEventListener("click", () => {
+                openCloudPc();
+            });
+            meLogoutButton?.addEventListener("click", () => {
+                mobileAccount = null;
+                clearMobileAccount();
+                refreshMeProfile();
+                setTab("home");
+            });
+            meBuyButton?.addEventListener("click", () => {
+                openTopupModal();
+            });
+            authCancelButton?.addEventListener("click", () => {
+                pendingProtectedRequest = null;
+                setAuthModalVisible(false);
+            });
+            authLoginButton?.addEventListener("click", () => {
+                submitAuthLogin();
+            });
+            authPasswordInput?.addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    submitAuthLogin();
+                }
+            });
+            authModal?.addEventListener("click", (event) => {
+                if (event.target === authModal) {
+                    pendingProtectedRequest = null;
+                    setAuthModalVisible(false);
+                }
+            });
+            playConfirmCancelButton?.addEventListener("click", () => {
+                setPlayConfirmVisible(false);
+            });
+            playConfirmModal?.addEventListener("click", (event) => {
+                if (event.target === playConfirmModal) {
+                    setPlayConfirmVisible(false);
+                }
+            });
+            playConfirmAcceptButton?.addEventListener("click", () => {
+                setPlayConfirmVisible(false);
+                openCloudPc(selectedPcGameTitle);
+            });
+            meTopupCloseButton?.addEventListener("click", () => {
+                setMeTopupVisible(false);
+            });
+            meTopupModal?.addEventListener("click", (event) => {
+                if (event.target === meTopupModal) {
+                    setMeTopupVisible(false);
+                }
+            });
+            meTopupToggleButton?.addEventListener("click", () => {
+                if (!meTopupContent || !meTopupToggleIcon) {
+                    return;
+                }
+                const nextHidden = !meTopupContent.hidden;
+                meTopupContent.hidden = nextHidden;
+                meTopupToggleButton.setAttribute("aria-expanded", nextHidden ? "false" : "true");
+                meTopupToggleIcon.textContent = nextHidden ? "▸" : "▾";
+            });
+            meTopupQrTrigger?.addEventListener("click", () => {
+                setQrZoomVisible(true);
+            });
+            qrZoomModal?.addEventListener("click", (event) => {
+                if (event.target === qrZoomModal) {
+                    setQrZoomVisible(false);
+                }
+            });
 
+            if (isMobileLoggedIn()) {
+                syncDesktopProfileCache(mobileAccount);
+            }
+            refreshMeProfile();
             loadHomeGamesFromDesktop();
         })();
     </script>
 </body>
 </html>
+

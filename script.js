@@ -288,6 +288,7 @@ const LIMORE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
 const DESKTOP_CURRENT_USER_KEY = "win11_current_user_id_v1";
 const LIMORE_ROLLOUT_ASSIGNMENT_KEY = "win11_rollout_assignment_v1";
 const DEVICE_ACCESS_ACCEPTED_KEY = "win11_device_access_prompt_accepted_v1";
+const MOBILE_ACCOUNT_KEY = "limore_mobile_account_v1";
 const LEGACY_DEVICE_ACCESS_ACCEPTED_KEYS = [
     "win11_device_access_prompt_accepted",
     "device_access_accepted",
@@ -501,6 +502,77 @@ function getCurrentDesktopUser() {
     }
 
     return desktopUsers.find((user) => user.id === currentDesktopUserId) || desktopUsers[0] || cloneJson(defaultDesktopUsers[0]);
+}
+
+function getMobileAccountSession() {
+    try {
+        const raw = localStorage.getItem(MOBILE_ACCOUNT_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (!parsed || typeof parsed !== "object") {
+            return null;
+        }
+        const username = String(parsed.username || "").trim();
+        const password = String(parsed.password || "");
+        const userId = String(parsed.userId || "").trim();
+        if (!username || !password) {
+            return null;
+        }
+        return {
+            username,
+            password,
+            userId: userId || buildDesktopUserId(username)
+        };
+    } catch (error) {
+        return null;
+    }
+}
+
+function hasMobileAccountSession() {
+    return Boolean(getMobileAccountSession());
+}
+
+function syncDesktopUserFromMobileSession() {
+    const mobileAccount = getMobileAccountSession();
+    if (!mobileAccount) {
+        return false;
+    }
+
+    const existingUsers = sanitizeDesktopUsers(loadLimoreAdminData().users);
+    const nextUserId = String(mobileAccount.userId || "").trim() || buildDesktopUserId(mobileAccount.username);
+    if (!nextUserId) {
+        return false;
+    }
+
+    const nextUser = {
+        id: nextUserId,
+        desktopName: mobileAccount.username,
+        limoreName: mobileAccount.username,
+        balance: 0,
+        activePackageId: "",
+        locked: false
+    };
+
+    const existingUserIndex = existingUsers.findIndex((user) => user.id === nextUserId);
+    const nextUsers = existingUserIndex >= 0
+        ? existingUsers.map((user) => user.id === nextUserId ? {
+            ...user,
+            desktopName: nextUser.desktopName || user.desktopName,
+            limoreName: nextUser.limoreName || user.limoreName
+        } : user)
+        : [...existingUsers, nextUser];
+
+    currentDesktopUserId = nextUserId;
+    initialSetupComplete = true;
+    storeDesktopUserId(nextUserId);
+    persistLimoreAdminData({
+        users: nextUsers,
+        state: {
+            currentUserId: nextUserId,
+            setupComplete: true
+        }
+    });
+    applyLimoreAdminData();
+    return true;
 }
 
 function syncDesktopUserUi() {
@@ -1900,6 +1972,8 @@ function startBootSequence() {
         document.body.classList.remove("is-booting");
         if (!initialSetupComplete) {
             showSetupPanel();
+        } else if (hasMobileAccountSession()) {
+            dismissLockScreen();
         }
         sendClientHeartbeat();
     }, 1550);
@@ -5712,6 +5786,7 @@ async function bootstrapApp() {
     clampVirtualControlsToViewport();
     normalizeOpenWindowsForViewport();
     applyLimoreAdminData(await fetchLimoreAdminDataFromServer());
+    syncDesktopUserFromMobileSession();
     loadDesktopWallpaperPreference();
     renderCalendar(calendarViewDate);
     initializeScreenWakeLock();
