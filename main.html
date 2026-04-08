@@ -1297,6 +1297,44 @@
             color: #1d1d1d;
         }
 
+        .mobile-client-blocked {
+            position: fixed;
+            inset: 0;
+            z-index: 84;
+            display: grid;
+            place-items: center;
+            background: rgba(8, 9, 12, 0.84);
+            padding: 16px;
+        }
+
+        .mobile-client-blocked[hidden] {
+            display: none;
+        }
+
+        .mobile-client-blocked-card {
+            width: min(360px, 100%);
+            border: 1px solid rgba(248, 96, 96, 0.46);
+            border-radius: 12px;
+            background: linear-gradient(160deg, rgba(37, 19, 19, 0.94), rgba(23, 15, 15, 0.94));
+            color: #ffd0d0;
+            padding: 14px;
+            display: grid;
+            gap: 8px;
+            text-align: center;
+        }
+
+        .mobile-client-blocked-card strong {
+            font-size: 16px;
+            color: #ffb2b2;
+        }
+
+        .mobile-client-blocked-card p {
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.45;
+            color: #f4c2c2;
+        }
+
         .bottom-nav {
             position: fixed;
             left: 0;
@@ -1492,6 +1530,13 @@
         </main>
     </div>
 
+    <div id="mobile-client-blocked" class="mobile-client-blocked" hidden aria-live="assertive">
+        <div class="mobile-client-blocked-card" role="alert">
+            <strong>Thiet bi da bi ngat</strong>
+            <p>Admin dang tam ngat client nay. Vui long lien he admin de mo lai quyen truy cap.</p>
+        </div>
+    </div>
+
     <div id="auth-modal" class="auth-modal" hidden aria-hidden="true">
         <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
             <strong id="auth-title">Dang nhap tai khoan</strong>
@@ -1647,6 +1692,9 @@
             const INTRO_SESSION_KEY = "limore_intro_passed_session_v1";
             const MOBILE_ACCOUNT_KEY = "limore_mobile_account_v1";
             const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
+            const LIMORE_CLIENTS_API = "/api/limore-clients";
+            const MOBILE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
+            const MOBILE_HEARTBEAT_INTERVAL_MS = 12000;
             const STEAM_ASSET_BASE_URL = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps";
             const fallbackGames = [
                 { appId: 730, title: "Counter-Strike 2", genre: "FPS Tactical", release: "2012" },
@@ -1696,6 +1744,7 @@
             const meCoinsValue = document.getElementById("me-coins-value");
             const meBuyButton = document.getElementById("me-buy-button");
             const meLogoutButton = document.getElementById("me-logout-button");
+            const mobileClientBlockedLayer = document.getElementById("mobile-client-blocked");
             const authModal = document.getElementById("auth-modal");
             const authSubtitle = document.getElementById("auth-subtitle");
             const authUsernameInput = document.getElementById("auth-username-input");
@@ -1744,6 +1793,8 @@
             let queueJoinTimeoutId = null;
             let queueTickIntervalId = null;
             let pcToastTimeoutId = null;
+            let lastMobileHeartbeatAt = 0;
+            let mobileHeartbeatTimerId = 0;
 
             const DIRECT_SERVER_COST = 120;
             const QUEUE_ENTRY_DELAY_MS = 15 * 60 * 1000;
@@ -1837,6 +1888,119 @@
 
             function isMobileLoggedIn() {
                 return Boolean(mobileAccount?.username && mobileAccount?.password);
+            }
+
+            function getOrCreateMobileClientId() {
+                try {
+                    const existing = localStorage.getItem(MOBILE_CLIENT_ID_KEY);
+                    if (existing) {
+                        return existing;
+                    }
+                    const nextId = `client-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+                    localStorage.setItem(MOBILE_CLIENT_ID_KEY, nextId);
+                    return nextId;
+                } catch (error) {
+                    return `client-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+                }
+            }
+
+            function getMobileClientDeviceType() {
+                const ua = String(navigator.userAgent || "").toLowerCase();
+                if (/ipad|tablet/.test(ua)) {
+                    return "tablet";
+                }
+                if (/iphone|android|mobile/.test(ua)) {
+                    return "mobile";
+                }
+                return "desktop";
+            }
+
+            function setMobileClientBlockedState(blocked) {
+                if (!mobileClientBlockedLayer) {
+                    return;
+                }
+                const isBlocked = Boolean(blocked);
+                mobileClientBlockedLayer.hidden = !isBlocked;
+                if (isBlocked) {
+                    mobileClientBlockedLayer.removeAttribute("aria-hidden");
+                } else {
+                    mobileClientBlockedLayer.setAttribute("aria-hidden", "true");
+                }
+            }
+
+            function getCurrentActiveAppId() {
+                if (queueIsActive) {
+                    return "queue_wait";
+                }
+                if (isPcAreaVisible()) {
+                    return "pc_area";
+                }
+                return `mobile_${activeTab || "home"}`;
+            }
+
+            function sendMobileClientHeartbeat(force = false) {
+                const now = Date.now();
+                if (!force && now - lastMobileHeartbeatAt < 9000) {
+                    return;
+                }
+                lastMobileHeartbeatAt = now;
+
+                const isLoggedIn = isMobileLoggedIn();
+                const payload = {
+                    clientId: getOrCreateMobileClientId(),
+                    deviceType: getMobileClientDeviceType(),
+                    userAgent: navigator.userAgent,
+                    currentPage: window.location.pathname,
+                    activeAppId: getCurrentActiveAppId(),
+                    desktopName: isLoggedIn ? String(mobileAccount?.username || "").trim() : "Nguoi dung mobile",
+                    limoreName: isLoggedIn ? String(mobileAccount?.username || "").trim() : "Anonymous",
+                    currentUserId: isLoggedIn ? String(mobileAccount?.userId || "").trim() : "guest_mobile",
+                    setupComplete: isLoggedIn,
+                    isMobile: true,
+                    anonymous: !isLoggedIn,
+                    trackingAccepted: true
+                };
+
+                fetch(LIMORE_CLIENTS_API, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                    keepalive: true
+                }).then((response) => response.ok ? response.json() : null)
+                    .then((responsePayload) => {
+                        if (responsePayload && typeof responsePayload.blocked === "boolean") {
+                            setMobileClientBlockedState(responsePayload.blocked);
+                        }
+                    })
+                    .catch(() => {});
+            }
+
+            function startMobileHeartbeatSync() {
+                window.clearInterval(mobileHeartbeatTimerId);
+                sendMobileClientHeartbeat(true);
+                mobileHeartbeatTimerId = window.setInterval(() => {
+                    sendMobileClientHeartbeat(false);
+                }, MOBILE_HEARTBEAT_INTERVAL_MS);
+            }
+
+            function bindMobileHeartbeatEvents() {
+                ["pointerdown", "touchstart", "keydown"].forEach((eventName) => {
+                    document.addEventListener(eventName, () => {
+                        sendMobileClientHeartbeat(false);
+                    }, { passive: true });
+                });
+                window.addEventListener("focus", () => {
+                    sendMobileClientHeartbeat(true);
+                });
+                window.addEventListener("pageshow", () => {
+                    sendMobileClientHeartbeat(true);
+                });
+                document.addEventListener("visibilitychange", () => {
+                    sendMobileClientHeartbeat(true);
+                });
+                window.addEventListener("beforeunload", () => {
+                    sendMobileClientHeartbeat(true);
+                });
             }
 
             function readAdminDataCache() {
@@ -2260,6 +2424,7 @@
                 clearQueueTimers();
                 setQueueCollapsed(false);
                 updateQueueUiState();
+                sendMobileClientHeartbeat(true);
             }
 
             function runLaunchLoading(gameTitle) {
@@ -2299,6 +2464,7 @@
                     stopQueueState();
                     runLaunchLoading(pendingPcLaunchGameTitle);
                 }, QUEUE_ENTRY_DELAY_MS);
+                sendMobileClientHeartbeat(true);
             }
 
             function selectPcAreaServer(serverId) {
@@ -2322,11 +2488,13 @@
                 renderPcAreaServers();
                 setPcToastVisible(false);
                 setPcAreaVisible(true);
+                sendMobileClientHeartbeat(true);
             }
 
             function closePcAreaScreen() {
                 setPcToastVisible(false);
                 setPcAreaVisible(false);
+                sendMobileClientHeartbeat(true);
             }
 
             function handlePcAreaPlay() {
@@ -2454,6 +2622,7 @@
                     panel.hidden = !isActive;
                 });
                 activeTab = safeTab;
+                sendMobileClientHeartbeat(true);
             }
 
             function submitAuthLogin() {
@@ -2491,6 +2660,7 @@
                 persistMobileAccount(mobileAccount);
                 refreshMeProfile();
                 setAuthModalVisible(false);
+                sendMobileClientHeartbeat(true);
 
                 if (pendingProtectedRequest?.type === "open_tab") {
                     const targetTab = pendingProtectedRequest.tab || "home";
@@ -2562,6 +2732,7 @@
                 clearMobileAccount();
                 refreshMeProfile();
                 setTab("home");
+                sendMobileClientHeartbeat(true);
             });
             meBuyButton?.addEventListener("click", () => {
                 openTopupModal();
@@ -2677,6 +2848,9 @@
             if (isMobileLoggedIn()) {
                 syncDesktopProfileCache(mobileAccount);
             }
+            setMobileClientBlockedState(false);
+            bindMobileHeartbeatEvents();
+            startMobileHeartbeatSync();
             refreshMeProfile();
             loadHomeGamesFromDesktop();
         })();

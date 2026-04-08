@@ -199,6 +199,11 @@ const adminRoleInput = document.getElementById("admin-role-input");
 const otpEnabledInput = document.getElementById("otp-enabled-input");
 const otpCodeInput = document.getElementById("otp-code-input");
 const saveOtpButton = document.getElementById("save-otp-button");
+const adminManageUsernameInput = document.getElementById("admin-manage-username");
+const adminManageRoleInput = document.getElementById("admin-manage-role");
+const adminManageOtpStateInput = document.getElementById("admin-manage-otp-state");
+const openManageSecurityButton = document.getElementById("open-manage-security-button");
+const openManagePermissionsButton = document.getElementById("open-manage-permissions-button");
 const roleUsernameInput = document.getElementById("role-username-input");
 const roleLevelInput = document.getElementById("role-level-input");
 const rolePasswordInput = document.getElementById("role-password-input");
@@ -711,6 +716,9 @@ function applyRolePermissions() {
     }
     if (saveRoleUserButton) {
         saveRoleUserButton.disabled = !isSuperAdmin();
+    }
+    if (openManagePermissionsButton) {
+        openManagePermissionsButton.disabled = !isSuperAdmin();
     }
     [roleUsernameInput, roleLevelInput, rolePasswordInput, otpEnabledInput, otpCodeInput].forEach((input) => {
         if (!input) {
@@ -1435,6 +1443,19 @@ function renderOverview() {
     overviewPackage.textContent = activePackage ? activePackage.title : "Chua co";
 }
 
+function renderAdminAuthManagePanel() {
+    if (adminManageUsernameInput) {
+        adminManageUsernameInput.value = String(adminUsername || "admin");
+    }
+    if (adminManageRoleInput) {
+        adminManageRoleInput.value = adminRole === "super_admin" ? "super_admin" : "mod";
+    }
+    if (adminManageOtpStateInput) {
+        const otpEnabled = otpEnabledInput?.value === "1";
+        adminManageOtpStateInput.value = otpEnabled ? "Dang bat" : "Dang tat";
+    }
+}
+
 function renderAdminPresence() {
     if (!adminOnlineCount || !adminTotalCount) {
         return;
@@ -1458,17 +1479,15 @@ function renderAdminPresence() {
             uniqueClientKeys.add(`fp:${fingerprint}`);
         }
     });
-    if (!uniqueClientKeys.size) {
-        rows.forEach((client) => {
-            const clientId = String(client?.clientId || "").trim();
-            const fingerprint = buildClientFingerprint(client);
-            if (clientId) {
-                uniqueClientKeys.add(`id:${clientId}`);
-            } else if (fingerprint) {
-                uniqueClientKeys.add(`fp:${fingerprint}`);
-            }
-        });
-    }
+    rows.forEach((client) => {
+        const clientId = String(client?.clientId || "").trim();
+        const fingerprint = buildClientFingerprint(client);
+        if (clientId) {
+            uniqueClientKeys.add(`id:${clientId}`);
+        } else if (fingerprint) {
+            uniqueClientKeys.add(`fp:${fingerprint}`);
+        }
+    });
 
     adminOnlineCount.textContent = String(online);
     adminTotalCount.textContent = String(uniqueClientKeys.size);
@@ -2070,6 +2089,7 @@ function mergeClientRows(clients) {
 function renderAll() {
     renderOverview();
     renderAdminPresence();
+    renderAdminAuthManagePanel();
     renderRolloutPanel();
     renderAccountForm();
     renderPackagesForm();
@@ -2119,6 +2139,11 @@ function setActiveAdminSection(sectionId) {
             behavior: "smooth"
         });
     }
+}
+
+function openManageSubtab(targetId) {
+    setActiveAdminSection("manage");
+    setActiveAdminSubtab("manage", targetId);
 }
 
 function syncAccountForm() {
@@ -3322,6 +3347,12 @@ adminLoginForm?.addEventListener("submit", handleAdminLogin);
 changePasswordButton?.addEventListener("click", handleChangePassword);
 saveOtpButton?.addEventListener("click", handleSaveOtpSettings);
 saveRoleUserButton?.addEventListener("click", handleSaveRoleUser);
+openManageSecurityButton?.addEventListener("click", () => {
+    openManageSubtab("manage-security");
+});
+openManagePermissionsButton?.addEventListener("click", () => {
+    openManageSubtab("manage-permissions");
+});
 refreshAuditButton?.addEventListener("click", fetchAuditLogs);
 refreshAlertsButton?.addEventListener("click", fetchAlerts);
 ackAllAlertsButton?.addEventListener("click", handleAckAllAlerts);

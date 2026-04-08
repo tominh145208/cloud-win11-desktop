@@ -193,6 +193,7 @@
                     </div>
                     <div class="admin-subtab-nav" data-admin-subnav>
                         <button type="button" class="admin-subtab-btn active" data-admin-subtab-target="manage-account">Tai khoan</button>
+                        <button type="button" class="admin-subtab-btn" data-admin-subtab-target="manage-admin-auth">Tai khoan + MK admin</button>
                         <button type="button" class="admin-subtab-btn" data-admin-subtab-target="manage-security">Bao mat</button>
                         <button type="button" class="admin-subtab-btn" data-admin-subtab-target="manage-permissions">Phan quyen</button>
                         <button type="button" class="admin-subtab-btn" data-admin-subtab-target="manage-users">Danh sach user</button>
@@ -228,6 +229,32 @@
                     <div class="admin-quick-save">
                         <button id="quick-save-account-button" type="button" class="admin-btn is-primary">Luu nhanh tai khoan</button>
                     </div>
+                </div>
+                        </article>
+
+                        <article class="admin-panel" data-admin-subtab-panel="manage-admin-auth" hidden>
+                <div class="panel-head">
+                    <h2>Quan ly tai khoan + mat khau admin</h2>
+                    <p>Muc moi de xem nhanh tai khoan admin hien tai va mo nhanh khu doi mat khau.</p>
+                </div>
+                <div class="panel-body form-grid">
+                    <label class="field">
+                        <span>Admin dang dang nhap</span>
+                        <input id="admin-manage-username" type="text" readonly>
+                    </label>
+                    <label class="field">
+                        <span>Role hien tai</span>
+                        <input id="admin-manage-role" type="text" readonly>
+                    </label>
+                    <label class="field">
+                        <span>Trang thai OTP</span>
+                        <input id="admin-manage-otp-state" type="text" readonly>
+                    </label>
+                    <button id="open-manage-security-button" type="button" class="admin-btn is-primary">Mo khu doi mat khau</button>
+                    <button id="open-manage-permissions-button" type="button" class="admin-btn">Mo khu phan quyen</button>
+                </div>
+                <div class="panel-body notes">
+                    <p>Ban co the xem thong tin tai khoan admin tai day, sau do bam vao nut ben tren de vao dung khu vuc chinh sua.</p>
                 </div>
                         </article>
 
