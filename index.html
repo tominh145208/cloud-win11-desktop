@@ -16,30 +16,15 @@
     <link rel="stylesheet" href="style.css?v=20260407-3">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script>
-        (function redirectIntroPerSession() {
-            const INTRO_SESSION_KEY = "limore_intro_passed_session_v1";
+        (function cleanupLegacyIntroQuery() {
             const params = new URLSearchParams(window.location.search);
-            const fromIntro = params.get("fromIntro") === "1";
-
-            if (fromIntro) {
-                try {
-                    sessionStorage.setItem(INTRO_SESSION_KEY, "1");
-                } catch (error) {
-                    // Ignore storage write errors and continue loading index.
-                }
-                const cleanPath = window.location.pathname + window.location.hash;
-                window.history.replaceState(null, "", cleanPath);
+            if (!params.has("fromIntro")) {
                 return;
             }
-
-            try {
-                if (sessionStorage.getItem(INTRO_SESSION_KEY) !== "1") {
-                    window.location.replace("intro.html");
-                }
-            } catch (error) {
-                // If storage is blocked, still force intro page for direct index visits.
-                window.location.replace("intro.html");
-            }
+            params.delete("fromIntro");
+            const query = params.toString();
+            const cleanPath = `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`;
+            window.history.replaceState(null, "", cleanPath);
         })();
     </script>
 </head>

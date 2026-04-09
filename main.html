@@ -1689,12 +1689,13 @@
 
     <script>
         (function setupMainMobileTabs() {
-            const INTRO_SESSION_KEY = "limore_intro_passed_session_v1";
             const MOBILE_ACCOUNT_KEY = "limore_mobile_account_v1";
+            const LIMORE_ADMIN_DATA_KEY = "win11_limore_admin_data_v1";
             const LIMORE_ADMIN_DATA_API = "/api/limore-admin-data";
             const LIMORE_CLIENTS_API = "/api/limore-clients";
             const MOBILE_CLIENT_ID_KEY = "win11_limore_client_id_v1";
             const MOBILE_HEARTBEAT_INTERVAL_MS = 12000;
+            const ADMIN_DATA_SYNC_INTERVAL_MS = 15000;
             const STEAM_ASSET_BASE_URL = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps";
             const fallbackGames = [
                 { appId: 730, title: "Counter-Strike 2", genre: "FPS Tactical", release: "2012" },
@@ -1718,17 +1719,6 @@
                 { appId: 227300, title: "Euro Truck Simulator 2", genre: "Driving Sim", release: "2012" },
                 { appId: 1551360, title: "Forza Horizon 5", genre: "Open World Racing", release: "2021" }
             ];
-            const params = new URLSearchParams(window.location.search);
-            if (params.get("fromIntro") === "1") {
-                try {
-                    sessionStorage.setItem(INTRO_SESSION_KEY, "1");
-                } catch (error) {
-                    // Ignore storage failures.
-                }
-                const cleanPath = `${window.location.pathname}${window.location.hash}`;
-                window.history.replaceState(null, "", cleanPath);
-            }
-
             const tabButtons = Array.from(document.querySelectorAll(".tab-btn[data-tab]"));
             const panels = Array.from(document.querySelectorAll(".panel[data-panel]"));
             const homeGamesGrid = document.getElementById("home-games-grid");
@@ -1846,6 +1836,14 @@
                 return base || "nguoi_dung";
             }
 
+            function normalizeIdentityValue(value) {
+                return String(value || "")
+                    .trim()
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "");
+            }
+
             function loadMobileAccount() {
                 try {
                     const raw = localStorage.getItem(MOBILE_ACCOUNT_KEY);
@@ -1866,13 +1864,22 @@
             }
 
             function persistMobileAccount(account) {
+                const nextAccount = {
+                    username: String(account?.username || "").trim(),
+                    password: String(account?.password || ""),
+                    userId: String(account?.userId || normalizeUserId(account?.username || ""))
+                };
+                const resolvedUserId = syncDesktopProfileCache(nextAccount);
+                if (resolvedUserId) {
+                    nextAccount.userId = resolvedUserId;
+                }
+                mobileAccount = nextAccount;
                 try {
-                    localStorage.setItem(MOBILE_ACCOUNT_KEY, JSON.stringify(account));
-                    localStorage.setItem("win11_current_user_id_v1", String(account.userId || ""));
+                    localStorage.setItem(MOBILE_ACCOUNT_KEY, JSON.stringify(nextAccount));
+                    localStorage.setItem("win11_current_user_id_v1", String(nextAccount.userId || ""));
                 } catch (error) {
                     // Ignore storage failures.
                 }
-                syncDesktopProfileCache(account);
             }
 
             function clearMobileAccount() {
@@ -2005,7 +2012,7 @@
 
             function readAdminDataCache() {
                 try {
-                    const raw = localStorage.getItem("win11_limore_admin_data_v1");
+                    const raw = localStorage.getItem(LIMORE_ADMIN_DATA_KEY);
                     const parsed = raw ? JSON.parse(raw) : null;
                     return parsed && typeof parsed === "object" ? parsed : null;
                 } catch (error) {
@@ -2013,13 +2020,34 @@
                 }
             }
 
+            function findAdminUserById(users, userId) {
+                const safeUserId = String(userId || "").trim();
+                if (!safeUserId) {
+                    return null;
+                }
+                return users.find((user) => String(user?.id || "") === safeUserId) || null;
+            }
+
+            function findAdminUserByName(users, username) {
+                const normalizedUsername = normalizeIdentityValue(username);
+                if (!normalizedUsername) {
+                    return null;
+                }
+                return users.find((user) => {
+                    const candidateName = normalizeIdentityValue(user?.desktopName || user?.limoreName || "");
+                    return Boolean(candidateName) && candidateName === normalizedUsername;
+                }) || null;
+            }
+
             function getCurrentCoinBalance() {
                 const adminData = readAdminDataCache();
                 const users = Array.isArray(adminData?.users) ? adminData.users : [];
-                const activeId = String(mobileAccount?.userId || adminData?.state?.currentUserId || "").trim();
-                const matchedUser = activeId
-                    ? users.find((user) => String(user?.id || "") === activeId)
-                    : null;
+                const desktopActiveUserId = String(adminData?.state?.currentUserId || "").trim();
+                const mobileUserId = String(mobileAccount?.userId || "").trim();
+                const mobileUsername = String(mobileAccount?.username || "").trim();
+                const matchedUser = findAdminUserById(users, desktopActiveUserId)
+                    || findAdminUserById(users, mobileUserId)
+                    || findAdminUserByName(users, mobileUsername);
                 const matchedBalance = Number(matchedUser?.balance);
                 if (Number.isFinite(matchedBalance) && matchedBalance >= 0) {
                     return Math.floor(matchedBalance);
@@ -2046,9 +2074,47 @@
                 }
             }
 
+            let isAdminDataSyncInFlight = false;
+            async function syncAdminDataFromServer(force = false) {
+                if (isAdminDataSyncInFlight && !force) {
+                    return;
+                }
+                isAdminDataSyncInFlight = true;
+                try {
+                    const response = await fetch(`${LIMORE_ADMIN_DATA_API}?t=${Date.now()}`, { cache: "no-store" });
+                    if (!response.ok) {
+                        throw new Error("load_failed");
+                    }
+                    const payload = await response.json();
+                    const serverData = payload?.data;
+                    if (serverData && typeof serverData === "object") {
+                        const currentData = readAdminDataCache() || {};
+                        const nextData = {
+                            ...currentData,
+                            ...serverData,
+                            state: {
+                                ...((currentData && currentData.state) ? currentData.state : {}),
+                                ...((serverData && serverData.state) ? serverData.state : {})
+                            }
+                        };
+                        try {
+                            localStorage.setItem(LIMORE_ADMIN_DATA_KEY, JSON.stringify(nextData));
+                        } catch (error) {
+                            // Ignore storage failures.
+                        }
+                    }
+                } catch (error) {
+                    // Ignore network failures and keep local state.
+                } finally {
+                    isAdminDataSyncInFlight = false;
+                    refreshMeProfile();
+                    updatePcAreaMeta();
+                }
+            }
+
             function syncDesktopProfileCache(account) {
                 if (!account?.username || !account?.userId) {
-                    return;
+                    return "";
                 }
                 const nextUser = {
                     id: String(account.userId),
@@ -2058,17 +2124,26 @@
                     activePackageId: "",
                     locked: false
                 };
+                let resolvedUserId = nextUser.id;
                 let nextUsersPayload = [nextUser];
 
                 try {
-                    const raw = localStorage.getItem("win11_limore_admin_data_v1");
+                    const raw = localStorage.getItem(LIMORE_ADMIN_DATA_KEY);
                     const parsed = raw ? JSON.parse(raw) : {};
                     const users = Array.isArray(parsed?.users) ? parsed.users : [];
-                    const existingIndex = users.findIndex((user) => String(user?.id || "") === nextUser.id);
-                    const nextUsers = existingIndex >= 0
-                        ? users.map((user, index) => index === existingIndex ? {
+                    const existingIndexById = users.findIndex((user) => String(user?.id || "") === nextUser.id);
+                    const existingIndexByName = users.findIndex((user) => {
+                        return normalizeIdentityValue(user?.desktopName || user?.limoreName || "")
+                            === normalizeIdentityValue(nextUser.desktopName);
+                    });
+                    const resolvedIndex = existingIndexById >= 0 ? existingIndexById : existingIndexByName;
+                    if (resolvedIndex >= 0) {
+                        resolvedUserId = String(users[resolvedIndex]?.id || nextUser.id);
+                    }
+                    const nextUsers = resolvedIndex >= 0
+                        ? users.map((user, index) => index === resolvedIndex ? {
                             ...user,
-                            id: nextUser.id,
+                            id: resolvedUserId,
                             desktopName: nextUser.desktopName,
                             limoreName: nextUser.limoreName
                         } : user)
@@ -2079,11 +2154,11 @@
                         users: nextUsers,
                         state: {
                             ...((parsed && parsed.state) ? parsed.state : {}),
-                            currentUserId: nextUser.id,
+                            currentUserId: resolvedUserId,
                             setupComplete: true
                         }
                     };
-                    localStorage.setItem("win11_limore_admin_data_v1", JSON.stringify(nextData));
+                    localStorage.setItem(LIMORE_ADMIN_DATA_KEY, JSON.stringify(nextData));
                 } catch (error) {
                     // Ignore storage sync failures.
                 }
@@ -2094,11 +2169,12 @@
                     body: JSON.stringify({
                         users: nextUsersPayload,
                         state: {
-                            currentUserId: nextUser.id,
+                            currentUserId: resolvedUserId,
                             setupComplete: true
                         }
                     })
                 }).catch(() => {});
+                return resolvedUserId;
             }
 
             function setAuthModalVisible(isVisible, reason = "Dang nhap truoc de mo tab nay.") {
@@ -2231,8 +2307,8 @@
                     return;
                 }
                 const target = gameTitle
-                    ? `index.html?fromIntro=1&game=${encodeURIComponent(gameTitle)}`
-                    : "index.html?fromIntro=1";
+                    ? `index.html?game=${encodeURIComponent(gameTitle)}`
+                    : "index.html";
                 window.location.href = target;
             }
 
@@ -2486,6 +2562,7 @@
                     refreshPcAreaServerPings();
                 }
                 renderPcAreaServers();
+                syncAdminDataFromServer(true);
                 setPcToastVisible(false);
                 setPcAreaVisible(true);
                 sendMobileClientHeartbeat(true);
@@ -2550,7 +2627,7 @@
 
             function getGamesFromLocalCache() {
                 try {
-                    const raw = localStorage.getItem("win11_limore_admin_data_v1");
+                    const raw = localStorage.getItem(LIMORE_ADMIN_DATA_KEY);
                     const parsed = raw ? JSON.parse(raw) : null;
                     return Array.isArray(parsed?.games) ? parsed.games : [];
                 } catch (error) {
@@ -2650,15 +2727,19 @@
                         return;
                     }
                 } else {
+                    const cachedAdminData = readAdminDataCache();
+                    const cachedUsers = Array.isArray(cachedAdminData?.users) ? cachedAdminData.users : [];
+                    const matchedExistingUser = findAdminUserByName(cachedUsers, username);
                     mobileAccount = {
                         username,
                         password,
-                        userId: normalizeUserId(username)
+                        userId: String(matchedExistingUser?.id || normalizeUserId(username))
                     };
                 }
 
                 persistMobileAccount(mobileAccount);
                 refreshMeProfile();
+                syncAdminDataFromServer(true);
                 setAuthModalVisible(false);
                 sendMobileClientHeartbeat(true);
 
@@ -2845,14 +2926,37 @@
                 }
             });
 
+            window.addEventListener("storage", (event) => {
+                if (event.key !== LIMORE_ADMIN_DATA_KEY) {
+                    return;
+                }
+                refreshMeProfile();
+                updatePcAreaMeta();
+            });
+            window.addEventListener("focus", () => {
+                syncAdminDataFromServer(true);
+            });
+            window.addEventListener("pageshow", () => {
+                syncAdminDataFromServer(true);
+            });
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible") {
+                    syncAdminDataFromServer(true);
+                }
+            });
+
             if (isMobileLoggedIn()) {
-                syncDesktopProfileCache(mobileAccount);
+                persistMobileAccount(mobileAccount);
             }
             setMobileClientBlockedState(false);
             bindMobileHeartbeatEvents();
             startMobileHeartbeatSync();
             refreshMeProfile();
             loadHomeGamesFromDesktop();
+            syncAdminDataFromServer(true);
+            window.setInterval(() => {
+                syncAdminDataFromServer(false);
+            }, ADMIN_DATA_SYNC_INTERVAL_MS);
         })();
     </script>
 </body>
